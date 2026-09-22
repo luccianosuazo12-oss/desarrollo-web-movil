@@ -1,0 +1,276 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Mantenedor de productos — El Brasero</title>
+<meta name="description" content="Mantenedor de maestro de productos: precios, stock y disponibilidad publicada en la carta.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Anton&family=Archivo:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;600&display=swap">
+<link rel="stylesheet" href="assets/css/estilos.css">
+</head>
+<body data-pagina="admin-productos.html">
+
+<div id="cabecera"></div>
+
+<main class="envoltorio">
+
+  <div class="encabezado-pagina">
+    <span class="rotulo">Caso de uso CU4 · Administrar productos <span class="referencia">RF 7 · RF 10</span></span>
+    <h1>Mantenedor de productos</h1>
+    <p>
+      Maestro de datos del menú. Al cambiar la disponibilidad, el producto
+      aparece o desaparece de la carta en línea de inmediato, sin necesidad de
+      republicar el sitio.
+    </p>
+  </div>
+
+  <nav class="rail" aria-label="Módulos internos">
+    <a href="caja-virtual.html">Caja virtual</a>
+    <a href="despacho.html">Despacho</a>
+    <a href="admin-productos.html" aria-current="page">Productos</a>
+    <a href="admin-clientes.html">Clientes y usuarios</a>
+    <a href="reportes.html">Reportes</a>
+  </nav>
+
+  <div class="pila-lg">
+
+    <div class="indicadores" id="indicadores"></div>
+
+    <div id="aviso-productos" hidden></div>
+
+    <section class="panel">
+      <header>
+        <h2>Maestro del menú</h2>
+        <div class="fila">
+          <label class="solo-lectores" for="filtro-categoria">Filtrar por categoría</label>
+          <select id="filtro-categoria" style="width:auto"></select>
+          <button class="boton chico" type="button" id="nuevo">Nuevo producto</button>
+        </div>
+      </header>
+      <div class="tabla-contenedor">
+        <table class="datos">
+          <caption class="solo-lectores">Productos del menú con precio, stock y disponibilidad</caption>
+          <thead>
+            <tr>
+              <th>Código</th><th class="envolver">Producto</th><th>Categoría</th>
+              <th class="num">Precio</th><th class="num">Stock</th><th>Disponibilidad</th><th>Acciones</th>
+            </tr>
+          </thead>
+          <tbody id="tabla-productos"></tbody>
+        </table>
+      </div>
+    </section>
+
+    <section class="panel" id="panel-edicion" hidden>
+      <header><h2 id="titulo-edicion">Editar producto</h2><button class="enlace-quitar" type="button" id="cerrar-edicion">Cerrar</button></header>
+      <form class="cuerpo pila" id="formulario-producto" novalidate>
+        <div class="formulario dos">
+          <div class="campo">
+            <label for="p-codigo">Código <span class="requerido">*</span></label>
+            <input type="text" id="p-codigo" name="codigo" required>
+          </div>
+          <div class="campo">
+            <label for="p-nombre">Nombre <span class="requerido">*</span></label>
+            <input type="text" id="p-nombre" name="nombre" required>
+          </div>
+          <div class="campo">
+            <label for="p-categoria">Categoría <span class="requerido">*</span></label>
+            <select id="p-categoria" name="categoria" required>
+              <option>Pollos</option><option>Acompañamientos</option><option>Combos</option>
+              <option>Salsas</option><option>Bebidas</option>
+            </select>
+          </div>
+          <div class="campo">
+            <label for="p-unidad">Unidad de venta <span class="requerido">*</span></label>
+            <input type="text" id="p-unidad" name="unidad" placeholder="1 pollo, 500 g, 1,5 litros…" required>
+          </div>
+          <div class="campo">
+            <label for="p-precio">Precio de venta <span class="requerido">*</span></label>
+            <input type="number" id="p-precio" name="precio" min="0" step="10" required>
+          </div>
+          <div class="campo">
+            <label for="p-stock">Stock disponible <span class="requerido">*</span></label>
+            <input type="number" id="p-stock" name="stock" min="0" step="1" required>
+          </div>
+        </div>
+        <div class="campo">
+          <label for="p-descripcion">Descripción para la carta</label>
+          <textarea id="p-descripcion" name="descripcion"></textarea>
+        </div>
+        <label class="opcion">
+          <input type="checkbox" id="p-disponible" name="disponible">
+          <span>
+            <span class="titulo">Publicar en la carta</span>
+            <span class="detalle">Si se desmarca, el producto se muestra como agotado y no se puede agregar al pedido.</span>
+          </span>
+        </label>
+        <div id="aviso-formulario" hidden></div>
+        <div class="fila">
+          <button class="boton" type="submit">Grabar cambios</button>
+          <button class="boton contorno" type="button" id="cancelar-edicion">Cancelar</button>
+        </div>
+      </form>
+    </section>
+
+  </div>
+</main>
+
+<div id="pie"></div>
+
+<script src="assets/js/datos.js"></script>
+<script src="assets/js/app.js"></script>
+<script>
+(function () {
+  const productos = BRASERO.productos.map(p => ({ ...p }));
+  const categorias = ["Todas", ...new Set(productos.map(p => p.categoria))];
+  let categoriaFiltro = "Todas";
+  let codigoEditando = null;
+
+  const elTabla = document.querySelector("#tabla-productos");
+  const elPanel = document.querySelector("#panel-edicion");
+  const formulario = document.querySelector("#formulario-producto");
+
+  document.querySelector("#filtro-categoria").innerHTML =
+    categorias.map(c => `<option>${c}</option>`).join("");
+
+  function pintarIndicadores() {
+    const publicados = productos.filter(p => p.disponible).length;
+    const agotados = productos.length - publicados;
+    const valorStock = productos.reduce((t, p) => t + p.precio * p.stock, 0);
+    document.querySelector("#indicadores").innerHTML = `
+      <div class="indicador"><span class="rotulo">Productos en maestro</span><div class="valor">${productos.length}</div><div class="apoyo">${categorias.length - 1} categorías</div></div>
+      <div class="indicador"><span class="rotulo">Publicados en la carta</span><div class="valor" style="color:var(--ok)">${publicados}</div><div class="apoyo">Visibles para el cliente</div></div>
+      <div class="indicador"><span class="rotulo">Agotados</span><div class="valor" style="color:var(--error)">${agotados}</div><div class="apoyo">Sin opción de compra</div></div>
+      <div class="indicador"><span class="rotulo">Valorización del stock</span><div class="valor">${Formato.pesos(valorStock)}</div><div class="apoyo">A precio de venta</div></div>`;
+  }
+
+  function pintarTabla() {
+    const visibles = productos.filter(p => categoriaFiltro === "Todas" || p.categoria === categoriaFiltro);
+    elTabla.innerHTML = visibles.map(p => `
+      <tr>
+        <td class="mono">${p.codigo}</td>
+        <td class="envolver"><strong>${escaparHTML(p.nombre)}</strong><div class="ayuda">${escaparHTML(p.unidad)}</div></td>
+        <td>${p.categoria}</td>
+        <td class="num">${Formato.pesos(p.precio)}</td>
+        <td class="num">${p.stock}</td>
+        <td><span class="pildora ${p.disponible ? "ok" : "error"}">${p.disponible ? "Publicado" : "Agotado"}</span></td>
+        <td>
+          <div class="fila" style="gap:6px">
+            <button class="boton chico contorno" type="button" data-accion="editar" data-codigo="${p.codigo}">Editar</button>
+            <button class="boton chico ${p.disponible ? "peligro" : "oscuro"}" type="button" data-accion="alternar" data-codigo="${p.codigo}">
+              ${p.disponible ? "Marcar agotado" : "Publicar"}
+            </button>
+          </div>
+        </td>
+      </tr>`).join("");
+  }
+
+  function abrirEdicion(producto) {
+    codigoEditando = producto ? producto.codigo : null;
+    document.querySelector("#titulo-edicion").textContent =
+      producto ? "Editar " + producto.nombre : "Nuevo producto";
+    formulario.elements.codigo.value = producto ? producto.codigo : "";
+    formulario.elements.codigo.readOnly = Boolean(producto);
+    formulario.elements.nombre.value = producto ? producto.nombre : "";
+    formulario.elements.categoria.value = producto ? producto.categoria : "Pollos";
+    formulario.elements.unidad.value = producto ? producto.unidad : "";
+    formulario.elements.precio.value = producto ? producto.precio : "";
+    formulario.elements.stock.value = producto ? producto.stock : 0;
+    formulario.elements.descripcion.value = producto ? producto.descripcion : "";
+    formulario.elements.disponible.checked = producto ? producto.disponible : true;
+    document.querySelector("#aviso-formulario").hidden = true;
+    elPanel.hidden = false;
+    elPanel.scrollIntoView({ behavior: "smooth", block: "center" });
+  }
+
+  elTabla.addEventListener("click", e => {
+    const boton = e.target.closest("button[data-accion]");
+    if (!boton) return;
+    const producto = productos.find(p => p.codigo === boton.dataset.codigo);
+
+    if (boton.dataset.accion === "editar") { abrirEdicion(producto); return; }
+
+    producto.disponible = !producto.disponible;
+    if (!producto.disponible) producto.stock = 0;
+    else if (producto.stock === 0) producto.stock = 10;
+    mostrarAviso("#aviso-productos", producto.disponible ? "ok" : "alerta",
+      `<strong>${escaparHTML(producto.nombre)}</strong> ${producto.disponible ? "quedó publicado en la carta" : "se marcó como agotado y ya no se puede agregar al pedido"}.`);
+    pintarTabla();
+    pintarIndicadores();
+  });
+
+  document.querySelector("#filtro-categoria").addEventListener("change", e => {
+    categoriaFiltro = e.target.value;
+    pintarTabla();
+  });
+
+  document.querySelector("#nuevo").addEventListener("click", () => abrirEdicion(null));
+  document.querySelector("#cerrar-edicion").addEventListener("click", () => { elPanel.hidden = true; });
+  document.querySelector("#cancelar-edicion").addEventListener("click", () => { elPanel.hidden = true; });
+
+  formulario.addEventListener("submit", e => {
+    e.preventDefault();
+    const d = formulario.elements;
+    formulario.querySelectorAll(".error-campo").forEach(x => x.remove());
+    formulario.querySelectorAll(".campo.invalido").forEach(c => c.classList.remove("invalido"));
+    let valido = true;
+
+    ["codigo", "nombre", "unidad", "precio", "stock"].forEach(campo => {
+      if (!String(d[campo].value).trim()) {
+        d[campo].closest(".campo").classList.add("invalido");
+        d[campo].closest(".campo").insertAdjacentHTML("beforeend", `<span class="error-campo">Dato obligatorio.</span>`);
+        valido = false;
+      }
+    });
+    if (Number(d.precio.value) <= 0) {
+      d.precio.closest(".campo").classList.add("invalido");
+      d.precio.closest(".campo").insertAdjacentHTML("beforeend", `<span class="error-campo">El precio debe ser mayor que cero.</span>`);
+      valido = false;
+    }
+    if (!codigoEditando && productos.some(p => p.codigo === d.codigo.value.trim().toUpperCase())) {
+      d.codigo.closest(".campo").classList.add("invalido");
+      d.codigo.closest(".campo").insertAdjacentHTML("beforeend", `<span class="error-campo">Ya existe un producto con este código.</span>`);
+      valido = false;
+    }
+
+    if (!valido) {
+      mostrarAviso("#aviso-formulario", "error", "Revisa los campos marcados antes de grabar.");
+      return;
+    }
+
+    const datos = {
+      codigo: d.codigo.value.trim().toUpperCase(),
+      nombre: d.nombre.value.trim(),
+      categoria: d.categoria.value,
+      unidad: d.unidad.value.trim(),
+      precio: Number(d.precio.value),
+      stock: Number(d.stock.value),
+      descripcion: d.descripcion.value.trim(),
+      disponible: d.disponible.checked,
+      icono: d.categoria.value === "Pollos" ? "pollo"
+        : d.categoria.value === "Combos" ? "combo"
+        : d.categoria.value === "Bebidas" ? "bebida"
+        : d.categoria.value === "Salsas" ? "salsa" : "papas"
+    };
+
+    if (codigoEditando) {
+      Object.assign(productos.find(p => p.codigo === codigoEditando), datos);
+      mostrarAviso("#aviso-productos", "ok", `Producto <strong>${escaparHTML(datos.nombre)}</strong> actualizado en el maestro.`);
+    } else {
+      productos.push(datos);
+      mostrarAviso("#aviso-productos", "ok", `Producto <strong>${escaparHTML(datos.nombre)}</strong> agregado al maestro con código ${datos.codigo}.`);
+    }
+
+    elPanel.hidden = true;
+    pintarTabla();
+    pintarIndicadores();
+  });
+
+  pintarIndicadores();
+  pintarTabla();
+})();
+</script>
+</body>
+</html>

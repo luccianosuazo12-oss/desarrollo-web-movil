@@ -1,0 +1,351 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Clientes y usuarios — El Brasero</title>
+<meta name="description" content="Mantenedores de clientes y de usuarios internos, con validación de correo y asignación de perfiles.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Anton&family=Archivo:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;600&display=swap">
+<link rel="stylesheet" href="assets/css/estilos.css">
+</head>
+<body data-pagina="admin-clientes.html">
+
+<div id="cabecera"></div>
+
+<main class="envoltorio">
+
+  <div class="encabezado-pagina">
+    <span class="rotulo">Casos de uso CU2 y CU3 <span class="referencia">RF 5 · RF 6 · RF 10 · RF 11</span></span>
+    <h1>Clientes y usuarios</h1>
+    <p>
+      Dos mantenedores en una misma pantalla: el maestro de clientes, que el
+      administrador puede completar desde el mesón, y el de usuarios internos,
+      donde se asigna el perfil que define el acceso a cada módulo.
+    </p>
+  </div>
+
+  <nav class="rail" aria-label="Módulos internos">
+    <a href="caja-virtual.html">Caja virtual</a>
+    <a href="despacho.html">Despacho</a>
+    <a href="admin-productos.html">Productos</a>
+    <a href="admin-clientes.html" aria-current="page">Clientes y usuarios</a>
+    <a href="reportes.html">Reportes</a>
+  </nav>
+
+  <div class="pila-lg">
+
+    <div class="indicadores" id="indicadores"></div>
+
+    <div id="aviso-general" hidden></div>
+
+    <section class="panel">
+      <header>
+        <h2>Maestro de clientes</h2>
+        <div class="fila">
+          <label class="solo-lectores" for="buscar-cliente">Buscar cliente</label>
+          <input type="search" id="buscar-cliente" placeholder="RUN, nombre o correo…" style="width:220px">
+          <button class="boton chico" type="button" id="nuevo-cliente">Registrar en local</button>
+        </div>
+      </header>
+      <div class="tabla-contenedor">
+        <table class="datos">
+          <caption class="solo-lectores">Clientes registrados con domicilio, contacto y estado de validación del correo</caption>
+          <thead>
+            <tr>
+              <th>RUN</th><th class="envolver">Nombre</th><th class="envolver">Domicilio</th>
+              <th>Contacto</th><th>Correo</th><th>Alta</th><th>Acciones</th>
+            </tr>
+          </thead>
+          <tbody id="tabla-clientes"></tbody>
+        </table>
+      </div>
+    </section>
+
+    <section class="panel" id="panel-cliente" hidden>
+      <header><h2>Registro de cliente en el local (RF 6)</h2><button class="enlace-quitar" type="button" id="cerrar-cliente">Cerrar</button></header>
+      <form class="cuerpo pila" id="formulario-cliente" novalidate>
+        <div class="formulario dos">
+          <div class="campo">
+            <label for="c-run">RUN <span class="requerido">*</span></label>
+            <input type="text" id="c-run" name="run" placeholder="12.345.678-5" required>
+          </div>
+          <div class="campo">
+            <label for="c-nombre">Nombre completo <span class="requerido">*</span></label>
+            <input type="text" id="c-nombre" name="nombre" required>
+          </div>
+          <div class="campo">
+            <label for="c-direccion">Dirección <span class="requerido">*</span></label>
+            <input type="text" id="c-direccion" name="direccion" required>
+          </div>
+          <div class="campo">
+            <label for="c-comuna">Comuna <span class="requerido">*</span></label>
+            <select id="c-comuna" name="comuna" required>
+              <option value="">Seleccionar…</option>
+              <option>Maipú</option><option>Cerrillos</option>
+              <option>Estación Central</option><option>Pudahuel</option>
+            </select>
+          </div>
+          <div class="campo">
+            <label for="c-provincia">Provincia <span class="requerido">*</span></label>
+            <select id="c-provincia" name="provincia" required>
+              <option value="">Seleccionar…</option><option>Santiago</option><option>Talagante</option>
+            </select>
+          </div>
+          <div class="campo">
+            <label for="c-region">Región <span class="requerido">*</span></label>
+            <select id="c-region" name="region" required>
+              <option value="">Seleccionar…</option><option>Metropolitana de Santiago</option>
+            </select>
+          </div>
+          <div class="campo">
+            <label for="c-nacimiento">Fecha de nacimiento <span class="requerido">*</span></label>
+            <input type="date" id="c-nacimiento" name="nacimiento" max="2026-09-21" required>
+          </div>
+          <div class="campo">
+            <label for="c-sexo">Sexo <span class="requerido">*</span></label>
+            <select id="c-sexo" name="sexo" required>
+              <option value="">Seleccionar…</option><option>Femenino</option><option>Masculino</option>
+              <option>Otro</option><option>Prefiero no indicarlo</option>
+            </select>
+          </div>
+          <div class="campo">
+            <label for="c-correo">Correo electrónico <span class="requerido">*</span></label>
+            <input type="email" id="c-correo" name="correo" required>
+            <span class="ayuda">Se valida con la API de mensajería antes de grabar.</span>
+          </div>
+          <div class="campo">
+            <label for="c-telefono">Teléfono <span class="requerido">*</span></label>
+            <input type="tel" id="c-telefono" name="telefono" placeholder="+56 9 1234 5678" required>
+          </div>
+        </div>
+        <div id="aviso-cliente" hidden></div>
+        <div class="fila">
+          <button class="boton" type="submit" id="grabar-cliente">Validar correo y grabar</button>
+          <button class="boton contorno" type="button" id="cancelar-cliente">Cancelar</button>
+        </div>
+      </form>
+    </section>
+
+    <section class="panel">
+      <header>
+        <h2>Maestro de usuarios internos</h2>
+        <button class="boton chico" type="button" id="nuevo-usuario">Crear usuario</button>
+      </header>
+      <div class="tabla-contenedor">
+        <table class="datos">
+          <caption class="solo-lectores">Usuarios internos con perfil asignado y estado de la cuenta</caption>
+          <thead>
+            <tr><th>Usuario</th><th class="envolver">Nombre</th><th>Perfil</th><th>Correo</th><th>Último acceso</th><th>Estado</th><th>Acciones</th></tr>
+          </thead>
+          <tbody id="tabla-usuarios"></tbody>
+        </table>
+      </div>
+      <div class="cuerpo">
+        <p class="ayuda">
+          El perfil determina las pantallas habilitadas (RF 12). Bloquear una
+          cuenta cierra su sesión activa en el próximo intento de acceso.
+        </p>
+      </div>
+    </section>
+
+  </div>
+</main>
+
+<div id="pie"></div>
+
+<script src="assets/js/datos.js"></script>
+<script src="assets/js/app.js"></script>
+<script>
+(function () {
+  const clientes = BRASERO.clientes.map(c => ({ ...c }));
+  const usuarios = BRASERO.usuarios.map(u => ({ ...u }));
+  let busqueda = "";
+
+  const elClientes = document.querySelector("#tabla-clientes");
+  const elUsuarios = document.querySelector("#tabla-usuarios");
+  const panelCliente = document.querySelector("#panel-cliente");
+  const formularioCliente = document.querySelector("#formulario-cliente");
+
+  function pintarIndicadores() {
+    const validados = clientes.filter(c => c.correoValidado).length;
+    document.querySelector("#indicadores").innerHTML = `
+      <div class="indicador"><span class="rotulo">Clientes registrados</span><div class="valor">${clientes.length}</div><div class="apoyo">Habilitados para comprar</div></div>
+      <div class="indicador"><span class="rotulo">Correos validados</span><div class="valor" style="color:var(--ok)">${validados}</div><div class="apoyo">De ${clientes.length} registrados</div></div>
+      <div class="indicador"><span class="rotulo">Usuarios internos</span><div class="valor">${usuarios.length}</div><div class="apoyo">${BRASERO.perfiles.length} perfiles definidos</div></div>
+      <div class="indicador"><span class="rotulo">Cuentas bloqueadas</span><div class="valor" style="color:var(--error)">${usuarios.filter(u => u.estado === "Bloqueado").length}</div><div class="apoyo">Requieren desbloqueo</div></div>`;
+  }
+
+  function pintarClientes() {
+    const visibles = clientes.filter(c =>
+      !busqueda || (c.run + " " + c.nombre + " " + c.correo).toLowerCase().includes(busqueda));
+    if (!visibles.length) {
+      elClientes.innerHTML = `<tr><td colspan="7"><p class="nota">Sin resultados para la búsqueda.</p></td></tr>`;
+      return;
+    }
+    elClientes.innerHTML = visibles.map(c => `
+      <tr>
+        <td class="mono">${c.run}</td>
+        <td class="envolver"><strong>${escaparHTML(c.nombre)}</strong><div class="ayuda">${Formato.fecha(c.nacimiento)} · ${c.sexo}</div></td>
+        <td class="envolver">${escaparHTML(c.direccion)}<div class="ayuda">${c.comuna}, ${c.provincia}</div></td>
+        <td class="mono">${c.telefono}</td>
+        <td>
+          <div>${escaparHTML(c.correo)}</div>
+          <span class="pildora ${c.correoValidado ? "ok" : "alerta"}">${c.correoValidado ? "Validado" : "Sin validar"}</span>
+        </td>
+        <td>${Formato.fecha(c.alta)}</td>
+        <td>${c.correoValidado
+          ? `<span class="ayuda">—</span>`
+          : `<button class="boton chico" type="button" data-validar="${c.run}">Validar correo</button>`}</td>
+      </tr>`).join("");
+  }
+
+  function pintarUsuarios() {
+    elUsuarios.innerHTML = usuarios.map(u => `
+      <tr>
+        <td class="mono">${u.usuario}</td>
+        <td class="envolver">${escaparHTML(u.nombre)}</td>
+        <td>
+          <label class="solo-lectores" for="perfil-${u.usuario}">Perfil de ${escaparHTML(u.nombre)}</label>
+          <select id="perfil-${u.usuario}" data-perfil="${u.usuario}" style="width:auto;padding:5px 8px;font-size:.82rem">
+            ${BRASERO.perfiles.map(p => `<option ${p.nombre === u.perfil ? "selected" : ""}>${p.nombre}</option>`).join("")}
+          </select>
+        </td>
+        <td>${escaparHTML(u.correo)}</td>
+        <td class="mono">${u.ultimoAcceso}</td>
+        <td><span class="pildora ${u.estado === "Activo" ? "ok" : "error"}">${u.estado}</span></td>
+        <td><button class="boton chico ${u.estado === "Activo" ? "peligro" : "oscuro"}" type="button" data-estado="${u.usuario}">
+          ${u.estado === "Activo" ? "Bloquear" : "Habilitar"}
+        </button></td>
+      </tr>`).join("");
+  }
+
+  elClientes.addEventListener("click", async e => {
+    const boton = e.target.closest("button[data-validar]");
+    if (!boton) return;
+    const cliente = clientes.find(c => c.run === boton.dataset.validar);
+    boton.disabled = true;
+    boton.textContent = "Validando…";
+    mostrarAviso("#aviso-general", "info", `Consultando la API de mensajería por ${escaparHTML(cliente.correo)}…`);
+    const resultado = await Validar.existenciaCorreo(cliente.correo);
+    if (resultado.existe) {
+      cliente.correoValidado = true;
+      mostrarAviso("#aviso-general", "ok",
+        `Correo de <strong>${escaparHTML(cliente.nombre)}</strong> validado. Ya puede recibir boletas y promociones.`);
+    } else {
+      mostrarAviso("#aviso-general", "error",
+        `La API informó que ${escaparHTML(cliente.correo)} no existe o está inactivo. Corrige el dato con el cliente.`);
+      boton.disabled = false;
+      boton.textContent = "Validar correo";
+    }
+    pintarClientes();
+    pintarIndicadores();
+  });
+
+  elUsuarios.addEventListener("click", e => {
+    const boton = e.target.closest("button[data-estado]");
+    if (!boton) return;
+    const usuario = usuarios.find(u => u.usuario === boton.dataset.estado);
+    usuario.estado = usuario.estado === "Activo" ? "Bloqueado" : "Activo";
+    mostrarAviso("#aviso-general", usuario.estado === "Activo" ? "ok" : "alerta",
+      `La cuenta <strong>${usuario.usuario}</strong> quedó ${usuario.estado.toLowerCase()}.`);
+    pintarUsuarios();
+    pintarIndicadores();
+  });
+
+  elUsuarios.addEventListener("change", e => {
+    const selector = e.target.closest("select[data-perfil]");
+    if (!selector) return;
+    const usuario = usuarios.find(u => u.usuario === selector.dataset.perfil);
+    usuario.perfil = selector.value;
+    mostrarAviso("#aviso-general", "ok",
+      `<strong>${escaparHTML(usuario.nombre)}</strong> ahora tiene el perfil ${escaparHTML(usuario.perfil)}. El cambio aplica en su próximo ingreso.`);
+    pintarUsuarios();
+  });
+
+  document.querySelector("#buscar-cliente").addEventListener("input", e => {
+    busqueda = e.target.value.trim().toLowerCase();
+    pintarClientes();
+  });
+
+  document.querySelector("#nuevo-cliente").addEventListener("click", () => {
+    panelCliente.hidden = false;
+    panelCliente.scrollIntoView({ behavior: "smooth", block: "center" });
+  });
+  document.querySelector("#cerrar-cliente").addEventListener("click", () => { panelCliente.hidden = true; });
+  document.querySelector("#cancelar-cliente").addEventListener("click", () => { panelCliente.hidden = true; });
+
+  document.querySelector("#nuevo-usuario").addEventListener("click", () => {
+    mostrarAviso("#aviso-general", "info",
+      "La creación de usuarios internos exige perfil y correo corporativo. El formulario reutiliza las mismas validaciones del registro de clientes.");
+  });
+
+  formularioCliente.addEventListener("submit", async e => {
+    e.preventDefault();
+    const d = formularioCliente.elements;
+    formularioCliente.querySelectorAll(".error-campo").forEach(x => x.remove());
+    formularioCliente.querySelectorAll(".campo.invalido").forEach(c => c.classList.remove("invalido"));
+    let valido = true;
+
+    const marcar = (campo, mensaje) => {
+      d[campo].closest(".campo").classList.add("invalido");
+      d[campo].closest(".campo").insertAdjacentHTML("beforeend", `<span class="error-campo">${mensaje}</span>`);
+      valido = false;
+    };
+
+    ["run", "nombre", "direccion", "comuna", "provincia", "region", "nacimiento", "sexo", "correo", "telefono"]
+      .forEach(campo => { if (!d[campo].value.trim()) marcar(campo, "Dato obligatorio."); });
+
+    if (d.run.value.trim() && !Validar.run(d.run.value)) marcar("run", "RUN inválido: revisa el dígito verificador.");
+    if (d.run.value.trim() && clientes.some(c => c.run.replace(/\./g, "") === d.run.value.replace(/\./g, "").toUpperCase()))
+      marcar("run", "Este RUN ya está registrado.");
+    if (d.correo.value.trim() && !Validar.formatoCorreo(d.correo.value)) marcar("correo", "Formato de correo inválido.");
+    if (d.telefono.value.trim() && !Validar.telefono(d.telefono.value)) marcar("telefono", "Formato: +56 9 1234 5678.");
+    if (d.nacimiento.value && !Validar.mayorDeEdad(d.nacimiento.value)) marcar("nacimiento", "El cliente debe ser mayor de edad.");
+
+    if (!valido) {
+      mostrarAviso("#aviso-cliente", "error", "Corrige los campos marcados para poder grabar.");
+      return;
+    }
+
+    const boton = document.querySelector("#grabar-cliente");
+    boton.disabled = true;
+    boton.textContent = "Validando correo…";
+    mostrarAviso("#aviso-cliente", "info", "Comprobando el correo con la API de mensajería…");
+
+    const resultado = await Validar.existenciaCorreo(d.correo.value.trim());
+    boton.disabled = false;
+    boton.textContent = "Validar correo y grabar";
+
+    if (!resultado.existe) {
+      marcar("correo", "El correo no existe o está inactivo según la API.");
+      mostrarAviso("#aviso-cliente", "error", "El registro no se grabó: el correo no pasó la validación del servicio de mensajería.");
+      return;
+    }
+
+    const nombreGrabado = d.nombre.value.trim();
+    clientes.unshift({
+      run: d.run.value.trim().toUpperCase(), nombre: nombreGrabado,
+      direccion: d.direccion.value.trim(), comuna: d.comuna.value,
+      provincia: d.provincia.value, region: d.region.value,
+      nacimiento: d.nacimiento.value, sexo: d.sexo.value,
+      correo: d.correo.value.trim(), telefono: d.telefono.value.trim(),
+      correoValidado: true, alta: "2026-09-21"
+    });
+
+    formularioCliente.reset();
+    panelCliente.hidden = true;
+    mostrarAviso("#aviso-general", "ok",
+      `Cliente <strong>${escaparHTML(nombreGrabado)}</strong> registrado desde el local, con correo validado. Ya puede comprar en el sitio.`);
+    pintarClientes();
+    pintarIndicadores();
+  });
+
+  pintarIndicadores();
+  pintarClientes();
+  pintarUsuarios();
+})();
+</script>
+</body>
+</html>

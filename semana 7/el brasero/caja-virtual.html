@@ -1,0 +1,235 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Caja virtual — El Brasero</title>
+<meta name="description" content="Registro de ventas de pedidos pagados y emisión de la boleta digital enviada al correo del cliente.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Anton&family=Archivo:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;600&display=swap">
+<link rel="stylesheet" href="assets/css/estilos.css">
+</head>
+<body data-pagina="caja-virtual.html">
+
+<div id="cabecera"></div>
+
+<main class="envoltorio">
+
+  <div class="encabezado-pagina">
+    <span class="rotulo">Caso de uso CU6 · Realizar venta <span class="referencia">RF 4 · RF 8</span></span>
+    <h1>Caja virtual</h1>
+    <p>
+      Sólo se registran ventas de pedidos de clientes registrados y con pago
+      confirmado. Cada venta queda asociada a la caja del cajero virtual que la
+      registra y genera la boleta digital que se envía al correo del cliente.
+    </p>
+  </div>
+
+  <nav class="rail" aria-label="Módulos internos">
+    <a href="caja-virtual.html" aria-current="page">Caja virtual</a>
+    <a href="despacho.html">Despacho</a>
+    <a href="admin-productos.html">Productos</a>
+    <a href="admin-clientes.html">Clientes y usuarios</a>
+    <a href="reportes.html">Reportes</a>
+  </nav>
+
+  <div class="pila-lg">
+
+    <div class="indicadores" id="indicadores"></div>
+
+    <div class="dos-columnas">
+
+      <div class="pila-lg">
+        <section class="panel">
+          <header>
+            <h2>Pedidos pagados pendientes de venta</h2>
+            <span class="pildora alerta" id="conteo-pendientes"></span>
+          </header>
+          <div class="tabla-contenedor">
+            <table class="datos">
+              <caption class="solo-lectores">Pedidos con pago confirmado a la espera de registro de venta</caption>
+              <thead>
+                <tr><th>Folio</th><th class="envolver">Cliente</th><th>Medio de pago</th><th class="num">Total</th><th>Acción</th></tr>
+              </thead>
+              <tbody id="tabla-pendientes"></tbody>
+            </table>
+          </div>
+          <div class="cuerpo" id="sin-pendientes" hidden>
+            <p class="nota">No hay pedidos pagados en espera. La caja queda a la espera de nuevas confirmaciones de pago.</p>
+          </div>
+        </section>
+
+        <section class="panel">
+          <header><h2>Ventas registradas en el turno</h2><span class="pildora neutro" id="caja-asignada"></span></header>
+          <div class="tabla-contenedor">
+            <table class="datos">
+              <caption class="solo-lectores">Ventas registradas durante el turno del cajero virtual</caption>
+              <thead>
+                <tr><th>Boleta</th><th>Pedido</th><th class="envolver">Cliente</th><th class="num">Total</th><th>Envío</th></tr>
+              </thead>
+              <tbody id="tabla-ventas"></tbody>
+              <tfoot id="pie-ventas"></tfoot>
+            </table>
+          </div>
+        </section>
+      </div>
+
+      <aside class="pila">
+        <div id="aviso-venta" hidden></div>
+        <div id="zona-boleta">
+          <div class="tarjeta">
+            <span class="rotulo">Boleta digital</span>
+            <p class="nota" style="margin-top:8px">
+              Selecciona un pedido pagado y registra la venta: aquí se
+              previsualiza la boleta antes de enviarla al correo del cliente.
+            </p>
+          </div>
+        </div>
+        <div class="tarjeta pila">
+          <span class="rotulo">Reglas de la caja</span>
+          <ul class="nota" style="margin:0;padding-left:18px;display:grid;gap:5px">
+            <li>La venta requiere pago confirmado por la plataforma externa.</li>
+            <li>El cliente debe estar registrado y con correo validado.</li>
+            <li>Cada boleta se numera de forma correlativa y no se reutiliza.</li>
+            <li>El envío al correo queda registrado con fecha y hora.</li>
+          </ul>
+        </div>
+      </aside>
+
+    </div>
+  </div>
+</main>
+
+<div id="pie"></div>
+
+<script src="assets/js/datos.js"></script>
+<script src="assets/js/app.js"></script>
+<script>
+(function () {
+  const sesion = Sesion.actual();
+  const cajero = (sesion && sesion.perfil === "Cajero virtual") ? sesion.nombre : "Paula Meneses Ríos";
+  let correlativo = 8843;
+
+  const pendientes = BRASERO.pedidos
+    .filter(p => p.estado === "Pagado")
+    .map(p => ({ ...p, lineas: p.lineas.map(l => ({ ...l })) }));
+
+  const ventas = BRASERO.pedidos
+    .filter(p => p.boleta && p.estado !== "Anulado")
+    .map(p => ({
+      boleta: p.boleta, folio: p.folio, cliente: p.cliente,
+      total: p.lineas.reduce((t, l) => t + l.precio * l.cantidad, 0),
+      envio: "Enviada", correo: (BRASERO.clientes.find(c => c.run === p.run) || {}).correo || ""
+    }));
+
+  const total = p => p.lineas.reduce((t, l) => t + l.precio * l.cantidad, 0);
+
+  document.querySelector("#caja-asignada").textContent = "Caja virtual 1 · " + cajero;
+
+  function pintarIndicadores() {
+    const recaudado = ventas.reduce((t, v) => t + v.total, 0);
+    document.querySelector("#indicadores").innerHTML = `
+      <div class="indicador"><span class="rotulo">Por registrar</span><div class="valor">${pendientes.length}</div><div class="apoyo">Pedidos con pago confirmado</div></div>
+      <div class="indicador"><span class="rotulo">Ventas del turno</span><div class="valor">${ventas.length}</div><div class="apoyo">Boletas emitidas</div></div>
+      <div class="indicador"><span class="rotulo">Recaudado</span><div class="valor">${Formato.pesos(recaudado)}</div><div class="apoyo">Total documentado</div></div>
+      <div class="indicador"><span class="rotulo">Correlativo siguiente</span><div class="valor">B-${correlativo}</div><div class="apoyo">Boleta electrónica</div></div>`;
+  }
+
+  function pintarPendientes() {
+    document.querySelector("#conteo-pendientes").textContent = pendientes.length + " en espera";
+    document.querySelector("#sin-pendientes").hidden = pendientes.length > 0;
+    document.querySelector("#tabla-pendientes").innerHTML = pendientes.map(p => `
+      <tr>
+        <td class="mono">${p.folio}</td>
+        <td class="envolver">${escaparHTML(p.cliente)}<div class="ayuda mono">${p.run}</div></td>
+        <td>${escaparHTML(p.medioPago)}</td>
+        <td class="num">${Formato.pesos(total(p))}</td>
+        <td><button class="boton chico" type="button" data-folio="${p.folio}">Registrar venta</button></td>
+      </tr>`).join("");
+  }
+
+  function pintarVentas() {
+    document.querySelector("#tabla-ventas").innerHTML = ventas.map(v => `
+      <tr>
+        <td class="mono">${v.boleta}</td>
+        <td class="mono">${v.folio}</td>
+        <td class="envolver">${escaparHTML(v.cliente)}</td>
+        <td class="num">${Formato.pesos(v.total)}</td>
+        <td><span class="pildora ok">${v.envio}</span></td>
+      </tr>`).join("");
+    document.querySelector("#pie-ventas").innerHTML = `
+      <tr><td colspan="3">Total documentado en el turno</td>
+      <td class="num">${Formato.pesos(ventas.reduce((t, v) => t + v.total, 0))}</td><td></td></tr>`;
+  }
+
+  function pintarBoleta(pedido, numero) {
+    const cliente = BRASERO.clientes.find(c => c.run === pedido.run) || {};
+    const bruto = total(pedido);
+    const neto = Math.round(bruto / 1.19);
+    document.querySelector("#zona-boleta").innerHTML = `
+      <div class="boleta" id="boleta-emitida">
+        <div class="encabezado">
+          <strong>EL BRASERO</strong><br>
+          ${BRASERO.local.nombre}<br>
+          RUT ${BRASERO.local.rut}<br>
+          ${BRASERO.local.direccion}<br>
+          BOLETA ELECTRÓNICA N° ${numero}
+        </div>
+        <div class="linea"><span>Pedido</span><span>${pedido.folio}</span></div>
+        <div class="linea"><span>Cliente</span><span>${escaparHTML(pedido.run)}</span></div>
+        <div class="linea"><span>Caja</span><span>Virtual 1</span></div>
+        <div class="linea"><span>Cajero</span><span>${escaparHTML(cajero.split(" ")[0])}</span></div>
+        <div class="separador"></div>
+        ${pedido.lineas.map(l => `<div class="linea"><span>${l.cantidad} × ${escaparHTML(l.nombre)}</span><span>${Formato.pesos(l.precio * l.cantidad)}</span></div>`).join("")}
+        <div class="separador"></div>
+        <div class="linea"><span>Neto</span><span>${Formato.pesos(neto)}</span></div>
+        <div class="linea"><span>IVA 19%</span><span>${Formato.pesos(bruto - neto)}</span></div>
+        <div class="linea total"><span>TOTAL</span><span>${Formato.pesos(bruto)}</span></div>
+        <div class="cierre">Enviada a ${escaparHTML(cliente.correo || "correo del cliente")}<br>Gracias por su compra</div>
+      </div>
+      <div class="fila no-imprimir" style="margin-top:12px">
+        <button class="boton contorno chico" type="button" onclick="window.print()">Imprimir</button>
+        <span class="pildora ok">Enviada por correo</span>
+      </div>`;
+  }
+
+  document.querySelector("#tabla-pendientes").addEventListener("click", e => {
+    const boton = e.target.closest("button[data-folio]");
+    if (!boton) return;
+    const indice = pendientes.findIndex(p => p.folio === boton.dataset.folio);
+    const pedido = pendientes[indice];
+    const cliente = BRASERO.clientes.find(c => c.run === pedido.run) || {};
+
+    if (cliente.correoValidado === false) {
+      mostrarAviso("#aviso-venta", "error",
+        `No se puede emitir la boleta de <strong>${pedido.folio}</strong>: el correo del cliente no está validado. Valídalo desde el mantenedor de clientes.`);
+      return;
+    }
+
+    boton.disabled = true;
+    boton.textContent = "Registrando…";
+
+    setTimeout(() => {
+      const numero = "B-" + correlativo++;
+      pendientes.splice(indice, 1);
+      ventas.unshift({
+        boleta: numero, folio: pedido.folio, cliente: pedido.cliente,
+        total: total(pedido), envio: "Enviada", correo: cliente.correo
+      });
+      mostrarAviso("#aviso-venta", "ok",
+        `Venta del pedido <strong>${pedido.folio}</strong> registrada en la caja virtual. Boleta <strong>${numero}</strong> emitida y enviada a ${escaparHTML(cliente.correo || "")}. La orden pasó a preparación.`);
+      pintarBoleta(pedido, numero);
+      pintarPendientes();
+      pintarVentas();
+      pintarIndicadores();
+    }, 1200);
+  });
+
+  pintarIndicadores();
+  pintarPendientes();
+  pintarVentas();
+})();
+</script>
+</body>
+</html>

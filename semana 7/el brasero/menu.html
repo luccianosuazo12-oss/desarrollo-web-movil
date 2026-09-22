@@ -1,0 +1,165 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Carta — El Brasero</title>
+<meta name="description" content="Carta de pollos a las brasas, acompañamientos, combos, salsas y bebidas con disponibilidad en línea.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Anton&family=Archivo:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;600&display=swap">
+<link rel="stylesheet" href="assets/css/estilos.css">
+</head>
+<body data-pagina="menu.html">
+
+<div id="cabecera"></div>
+
+<main class="envoltorio">
+
+  <div class="encabezado-pagina">
+    <span class="rotulo">Caso de uso CU5 · Generar pedido <span class="referencia">RF 1 · RF 7</span></span>
+    <h1>Carta</h1>
+    <p>
+      Los productos agotados se muestran sin opción de compra: la disponibilidad
+      la actualiza el administrador desde el mantenedor de productos y se consulta
+      cada vez que se carga la carta.
+    </p>
+  </div>
+
+  <div class="pila-lg">
+
+    <div class="fila-sep">
+      <div class="filtros" id="filtros" role="group" aria-label="Filtrar por categoría"></div>
+      <label class="campo" style="max-width:250px;flex:1">
+        <span class="solo-lectores">Buscar producto</span>
+        <input type="search" id="busqueda" placeholder="Buscar en la carta…" autocomplete="off">
+      </label>
+    </div>
+
+    <div id="aviso-agregado" hidden></div>
+
+    <div class="rejilla c3" id="catalogo"></div>
+    <div class="vacio" id="sin-resultados" hidden>No hay productos que coincidan con la búsqueda.</div>
+
+    <div class="panel">
+      <header>
+        <h2>Resumen de tu pedido</h2>
+        <a class="boton chico" href="carrito.html">Ir a pagar</a>
+      </header>
+      <div class="cuerpo" id="mini-pedido"></div>
+    </div>
+
+  </div>
+</main>
+
+<div id="pie"></div>
+
+<script src="assets/js/datos.js"></script>
+<script src="assets/js/app.js"></script>
+<script>
+(function () {
+  const categorias = ["Todos", ...new Set(BRASERO.productos.map(p => p.categoria))];
+  const parametros = new URLSearchParams(location.search);
+  let categoriaActiva = categorias.includes(parametros.get("categoria")) ? parametros.get("categoria") : "Todos";
+  let textoBusqueda = "";
+
+  const elFiltros = document.querySelector("#filtros");
+  const elCatalogo = document.querySelector("#catalogo");
+  const elVacio = document.querySelector("#sin-resultados");
+  const elMini = document.querySelector("#mini-pedido");
+
+  function pintarFiltros() {
+    elFiltros.innerHTML = categorias.map(c => `
+      <button class="filtro" type="button" data-categoria="${c}" aria-pressed="${c === categoriaActiva}">
+        ${c}${c === "Todos" ? "" : ` (${BRASERO.productos.filter(p => p.categoria === c).length})`}
+      </button>`).join("");
+  }
+
+  function pintarCatalogo() {
+    const filtrados = BRASERO.productos.filter(p => {
+      const porCategoria = categoriaActiva === "Todos" || p.categoria === categoriaActiva;
+      const porTexto = !textoBusqueda ||
+        (p.nombre + " " + p.descripcion + " " + p.codigo).toLowerCase().includes(textoBusqueda);
+      return porCategoria && porTexto;
+    });
+
+    elVacio.hidden = filtrados.length > 0;
+    elCatalogo.innerHTML = filtrados.map(p => `
+      <article class="carta-producto ${p.disponible ? "" : "agotado"}">
+        <div class="grafico">
+          ${p.disponible ? "" : `<span class="sello agotado">Agotado</span>`}
+          ${p.categoria === "Combos" && p.disponible ? `<span class="sello">Promo</span>` : ""}
+          ${graficoProducto(p)}
+        </div>
+        <div class="info">
+          <div class="fila-sep" style="align-items:flex-start">
+            <h3>${escaparHTML(p.nombre)}</h3>
+            <span class="pildora ${p.disponible ? "ok" : "error"}">${p.disponible ? "Disponible" : "Agotado"}</span>
+          </div>
+          <p class="descripcion">${escaparHTML(p.descripcion)}</p>
+          <p class="ayuda"><span class="referencia">${p.codigo}</span> · ${escaparHTML(p.unidad)}</p>
+          <div class="pie">
+            <span class="precio">${Formato.pesos(p.precio)}</span>
+            ${p.disponible
+              ? `<button class="boton chico" type="button" data-codigo="${p.codigo}">Agregar</button>`
+              : `<button class="boton chico contorno" type="button" disabled>Sin stock</button>`}
+          </div>
+        </div>
+      </article>`).join("");
+  }
+
+  function pintarMiniPedido() {
+    const lineas = Pedido.lineas();
+    if (!lineas.length) {
+      elMini.innerHTML = `<p class="nota">Todavía no has agregado productos. Para comprar necesitas una cuenta registrada; puedes armar el pedido y registrarte al momento de pagar.</p>`;
+      return;
+    }
+    elMini.innerHTML = `
+      <div class="tabla-contenedor">
+        <table class="datos">
+          <thead><tr><th>Producto</th><th class="num">Cantidad</th><th class="num">Subtotal</th></tr></thead>
+          <tbody>
+            ${lineas.map(l => `
+              <tr>
+                <td class="envolver">${escaparHTML(l.nombre)}</td>
+                <td class="num">${l.cantidad}</td>
+                <td class="num">${Formato.pesos(l.precio * l.cantidad)}</td>
+              </tr>`).join("")}
+          </tbody>
+          <tfoot>
+            <tr><td>Total del pedido</td><td class="num">${Pedido.unidades()}</td><td class="num">${Formato.pesos(Pedido.total())}</td></tr>
+          </tfoot>
+        </table>
+      </div>`;
+  }
+
+  elFiltros.addEventListener("click", e => {
+    const boton = e.target.closest("button[data-categoria]");
+    if (!boton) return;
+    categoriaActiva = boton.dataset.categoria;
+    pintarFiltros();
+    pintarCatalogo();
+  });
+
+  document.querySelector("#busqueda").addEventListener("input", e => {
+    textoBusqueda = e.target.value.trim().toLowerCase();
+    pintarCatalogo();
+  });
+
+  elCatalogo.addEventListener("click", e => {
+    const boton = e.target.closest("button[data-codigo]");
+    if (!boton) return;
+    const producto = BRASERO.productos.find(p => p.codigo === boton.dataset.codigo);
+    Pedido.agregar(producto.codigo);
+    mostrarAviso("#aviso-agregado", "ok",
+      `<strong>${escaparHTML(producto.nombre)}</strong> se agregó a tu pedido. <a href="carrito.html">Revisar y pagar</a>.`);
+    pintarMiniPedido();
+  });
+
+  pintarFiltros();
+  pintarCatalogo();
+  pintarMiniPedido();
+})();
+</script>
+</body>
+</html>

@@ -1,0 +1,287 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Crear cuenta — El Brasero</title>
+<meta name="description" content="Registro de clientes con validación de RUN y comprobación del correo electrónico mediante API de mensajería.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Anton&family=Archivo:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;600&display=swap">
+<link rel="stylesheet" href="assets/css/estilos.css">
+</head>
+<body data-pagina="registro.html">
+
+<div id="cabecera"></div>
+
+<main class="envoltorio">
+
+  <div class="encabezado-pagina">
+    <span class="rotulo">Caso de uso CU3 · Administrar clientes <span class="referencia">RF 5 · RF 6 · RF 11</span></span>
+    <h1>Crear cuenta de cliente</h1>
+    <p>
+      El registro habilita la compra en línea y el acceso a promociones. Antes de
+      grabar, el sistema comprueba con la API de mensajería que el correo exista
+      y esté activo, porque es el canal por el que se envía la boleta.
+    </p>
+  </div>
+
+  <div class="dos-columnas">
+
+    <form class="panel" id="formulario-registro" novalidate>
+      <header><h2>Datos del cliente</h2><span class="pildora neutro">Formulario web</span></header>
+      <div class="cuerpo pila-lg">
+
+        <div class="pila">
+          <span class="rotulo">Identificación</span>
+          <div class="formulario dos">
+            <div class="campo">
+              <label for="run">RUN <span class="requerido">*</span></label>
+              <input type="text" id="run" name="run" placeholder="12.345.678-5" autocomplete="off" required>
+              <span class="ayuda">Con guion y dígito verificador. Se valida por módulo 11.</span>
+            </div>
+            <div class="campo">
+              <label for="nombre">Nombre completo <span class="requerido">*</span></label>
+              <input type="text" id="nombre" name="nombre" placeholder="Nombres y apellidos" autocomplete="name" required>
+            </div>
+            <div class="campo">
+              <label for="nacimiento">Fecha de nacimiento <span class="requerido">*</span></label>
+              <input type="date" id="nacimiento" name="nacimiento" max="2026-09-21" required>
+            </div>
+            <div class="campo">
+              <label for="sexo">Sexo <span class="requerido">*</span></label>
+              <select id="sexo" name="sexo" required>
+                <option value="">Seleccionar…</option>
+                <option>Femenino</option>
+                <option>Masculino</option>
+                <option>Otro</option>
+                <option>Prefiero no indicarlo</option>
+              </select>
+            </div>
+          </div>
+        </div>
+
+        <div class="pila">
+          <span class="rotulo">Domicilio de despacho</span>
+          <div class="formulario dos">
+            <div class="campo">
+              <label for="direccion">Dirección <span class="requerido">*</span></label>
+              <input type="text" id="direccion" name="direccion" placeholder="Calle, número, departamento" autocomplete="street-address" required>
+            </div>
+            <div class="campo">
+              <label for="comuna">Comuna <span class="requerido">*</span></label>
+              <select id="comuna" name="comuna" required>
+                <option value="">Seleccionar…</option>
+                <option>Maipú</option>
+                <option>Cerrillos</option>
+                <option>Estación Central</option>
+                <option>Pudahuel</option>
+                <option>Padre Hurtado</option>
+              </select>
+            </div>
+            <div class="campo">
+              <label for="provincia">Provincia <span class="requerido">*</span></label>
+              <select id="provincia" name="provincia" required>
+                <option value="">Seleccionar…</option>
+                <option>Santiago</option>
+                <option>Talagante</option>
+                <option>Maipo</option>
+              </select>
+            </div>
+            <div class="campo">
+              <label for="region">Región <span class="requerido">*</span></label>
+              <select id="region" name="region" required>
+                <option value="">Seleccionar…</option>
+                <option>Metropolitana de Santiago</option>
+                <option>Valparaíso</option>
+                <option>O'Higgins</option>
+              </select>
+            </div>
+          </div>
+        </div>
+
+        <div class="pila">
+          <span class="rotulo">Contacto y acceso</span>
+          <div class="formulario dos">
+            <div class="campo">
+              <label for="correo">Correo electrónico <span class="requerido">*</span></label>
+              <input type="email" id="correo" name="correo" placeholder="nombre@correo.cl" autocomplete="email" required>
+              <span class="ayuda" id="estado-correo">Se verificará su existencia con la API de mensajería.</span>
+            </div>
+            <div class="campo">
+              <label for="telefono">Teléfono <span class="requerido">*</span></label>
+              <input type="tel" id="telefono" name="telefono" placeholder="+56 9 1234 5678" autocomplete="tel" required>
+            </div>
+            <div class="campo">
+              <label for="clave">Contraseña <span class="requerido">*</span></label>
+              <input type="password" id="clave" name="clave" autocomplete="new-password" required>
+              <span class="ayuda">Mínimo 8 caracteres, con al menos un número. Se almacena cifrada.</span>
+            </div>
+            <div class="campo">
+              <label for="clave2">Repetir contraseña <span class="requerido">*</span></label>
+              <input type="password" id="clave2" name="clave2" autocomplete="new-password" required>
+            </div>
+          </div>
+        </div>
+
+        <label class="opcion">
+          <input type="checkbox" id="ofertas" checked>
+          <span>
+            <span class="titulo">Quiero recibir ofertas y promociones</span>
+            <span class="detalle">Enviadas al correo registrado. Puedes desactivarlo cuando quieras desde Mi cuenta.</span>
+          </span>
+        </label>
+
+        <div id="aviso-registro" hidden></div>
+
+        <div class="fila">
+          <button class="boton" type="submit" id="enviar">Validar correo y registrarme</button>
+          <button class="boton contorno" type="button" id="ejemplo">Rellenar con datos de prueba</button>
+        </div>
+      </div>
+    </form>
+
+    <aside class="pila">
+      <div class="tarjeta pila">
+        <span class="rotulo">Validación del correo (RF 11)</span>
+        <p class="nota">
+          El front end sólo envía el correo al Web Service; la comprobación de
+          existencia y estado la ejecuta la API de mensajería. Mientras responde,
+          el botón queda bloqueado para evitar registros duplicados.
+        </p>
+        <hr class="separador-h">
+        <p class="nota">
+          Para probar un rechazo del servicio, usa un correo del dominio
+          <span class="mono">@correo.inexistente</span> o <span class="mono">@noexiste.cl</span>.
+        </p>
+      </div>
+      <div class="tarjeta pila">
+        <span class="rotulo">Registro en el local (RF 6)</span>
+        <p class="nota">
+          El administrador puede registrar al cliente desde el mesón con este
+          mismo formulario, disponible en el
+          <a href="admin-clientes.html">mantenedor de clientes</a>. La validación
+          del correo se aplica en ambos casos.
+        </p>
+      </div>
+      <div class="tarjeta pila">
+        <span class="rotulo">Validaciones aplicadas</span>
+        <ul class="nota" style="margin:0;padding-left:18px;display:grid;gap:4px">
+          <li>RUN chileno con dígito verificador (módulo 11).</li>
+          <li>Formato de correo y existencia del buzón.</li>
+          <li>Teléfono móvil chileno de 9 dígitos.</li>
+          <li>Mayoría de edad según fecha de nacimiento.</li>
+          <li>Coincidencia y robustez de la contraseña.</li>
+          <li>Comuna, provincia y región obligatorias.</li>
+        </ul>
+      </div>
+    </aside>
+
+  </div>
+</main>
+
+<div id="pie"></div>
+
+<script src="assets/js/datos.js"></script>
+<script src="assets/js/app.js"></script>
+<script>
+(function () {
+  const formulario = document.querySelector("#formulario-registro");
+  const boton = document.querySelector("#enviar");
+  const estadoCorreo = document.querySelector("#estado-correo");
+
+  function limpiarErrores() {
+    formulario.querySelectorAll(".error-campo").forEach(e => e.remove());
+    formulario.querySelectorAll(".campo.invalido").forEach(c => c.classList.remove("invalido"));
+  }
+
+  function marcarError(nombreCampo, mensaje) {
+    const campo = formulario.elements[nombreCampo];
+    const contenedor = campo.closest(".campo");
+    contenedor.classList.add("invalido");
+    contenedor.insertAdjacentHTML("beforeend", `<span class="error-campo">${mensaje}</span>`);
+  }
+
+  document.querySelector("#ejemplo").addEventListener("click", () => {
+    formulario.elements.run.value = "18.765.432-1";
+    formulario.elements.nombre.value = "Valentina Paz Muñoz Herrera";
+    formulario.elements.nacimiento.value = "1995-07-18";
+    formulario.elements.sexo.value = "Femenino";
+    formulario.elements.direccion.value = "Avenida Pajaritos 3410, depto. 802";
+    formulario.elements.comuna.value = "Maipú";
+    formulario.elements.provincia.value = "Santiago";
+    formulario.elements.region.value = "Metropolitana de Santiago";
+    formulario.elements.correo.value = "valentina.munoz@correo.cl";
+    formulario.elements.telefono.value = "+56 9 7788 1234";
+    formulario.elements.clave.value = "brasero2026";
+    formulario.elements.clave2.value = "brasero2026";
+  });
+
+  formulario.addEventListener("submit", async e => {
+    e.preventDefault();
+    limpiarErrores();
+    const d = formulario.elements;
+    let valido = true;
+
+    ["run", "nombre", "nacimiento", "sexo", "direccion", "comuna", "provincia", "region", "correo", "telefono", "clave", "clave2"]
+      .forEach(campo => {
+        if (!d[campo].value.trim()) { marcarError(campo, "Dato obligatorio."); valido = false; }
+      });
+
+    if (d.run.value.trim() && !Validar.run(d.run.value)) {
+      marcarError("run", "El RUN no es válido: revisa el dígito verificador."); valido = false;
+    }
+    if (d.run.value.trim() && BRASERO.clientes.some(c => c.run.replace(/\./g, "") === d.run.value.replace(/\./g, "").toUpperCase())) {
+      marcarError("run", "Este RUN ya está registrado. Puedes ingresar con tu cuenta."); valido = false;
+    }
+    if (d.correo.value.trim() && !Validar.formatoCorreo(d.correo.value)) {
+      marcarError("correo", "El formato del correo no es válido."); valido = false;
+    }
+    if (d.telefono.value.trim() && !Validar.telefono(d.telefono.value)) {
+      marcarError("telefono", "Ingresa un móvil chileno: +56 9 1234 5678."); valido = false;
+    }
+    if (d.nacimiento.value && !Validar.mayorDeEdad(d.nacimiento.value)) {
+      marcarError("nacimiento", "Debes ser mayor de 18 años para registrarte."); valido = false;
+    }
+    if (d.clave.value && (d.clave.value.length < 8 || !/\d/.test(d.clave.value))) {
+      marcarError("clave", "Mínimo 8 caracteres e incluir al menos un número."); valido = false;
+    }
+    if (d.clave.value && d.clave2.value && d.clave.value !== d.clave2.value) {
+      marcarError("clave2", "Las contraseñas no coinciden."); valido = false;
+    }
+
+    if (!valido) {
+      mostrarAviso("#aviso-registro", "error", "No se pudo grabar el registro: corrige los campos marcados.");
+      return;
+    }
+
+    boton.disabled = true;
+    boton.textContent = "Validando correo…";
+    estadoCorreo.textContent = "Consultando API de mensajería…";
+    estadoCorreo.style.color = "var(--info)";
+    mostrarAviso("#aviso-registro", "info", "Comprobando con la API de mensajería que el correo exista y esté activo.");
+
+    const resultado = await Validar.existenciaCorreo(d.correo.value.trim());
+
+    boton.disabled = false;
+    boton.textContent = "Validar correo y registrarme";
+
+    if (!resultado.existe) {
+      estadoCorreo.textContent = `El dominio ${resultado.dominio} no responde.`;
+      estadoCorreo.style.color = "var(--error)";
+      marcarError("correo", "El correo no existe o no está activo según la API de mensajería.");
+      mostrarAviso("#aviso-registro", "error",
+        `El registro no se grabó: la <strong>${escaparHTML(resultado.servicio)}</strong> informó que la casilla no existe o está inactiva. Usa un correo vigente, ya que por ahí se envía tu boleta.`);
+      return;
+    }
+
+    estadoCorreo.textContent = "Correo verificado y activo.";
+    estadoCorreo.style.color = "var(--ok)";
+    mostrarAviso("#aviso-registro", "ok",
+      `Cuenta creada para <strong>${escaparHTML(d.nombre.value)}</strong>. Correo validado por ${escaparHTML(resultado.servicio)}. Ya puedes <a href="login.html">ingresar</a> y comprar en línea.`);
+    formulario.querySelector(".cuerpo").scrollIntoView({ behavior: "smooth", block: "start" });
+  });
+})();
+</script>
+</body>
+</html>
