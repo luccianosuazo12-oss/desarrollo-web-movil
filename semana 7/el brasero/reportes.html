@@ -1,0 +1,240 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Reporte de ventas — El Brasero</title>
+<meta name="description" content="Reporte de ventas por período de consulta para el dueño: montos, documentos y productos más vendidos.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Anton&family=Archivo:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;600&display=swap">
+<link rel="stylesheet" href="assets/css/estilos.css">
+</head>
+<body data-pagina="reportes.html">
+
+<div id="cabecera"></div>
+
+<main class="envoltorio">
+
+  <div class="encabezado-pagina">
+    <span class="rotulo">Caso de uso CU8 · Generar reporte de ventas <span class="referencia">RF 9</span></span>
+    <h1>Reporte de ventas</h1>
+    <p>
+      Consulta de ventas por período para el dueño del restaurante. El reporte
+      considera únicamente ventas documentadas y descuenta las compras anuladas.
+    </p>
+  </div>
+
+  <nav class="rail" aria-label="Módulos internos">
+    <a href="caja-virtual.html">Caja virtual</a>
+    <a href="despacho.html">Despacho</a>
+    <a href="admin-productos.html">Productos</a>
+    <a href="admin-clientes.html">Clientes y usuarios</a>
+    <a href="reportes.html" aria-current="page">Reportes</a>
+  </nav>
+
+  <div class="pila-lg">
+
+    <form class="panel" id="formulario-periodo">
+      <header><h2>Período de consulta</h2><span class="pildora neutro">Datos al 21-09-2026</span></header>
+      <div class="cuerpo">
+        <div class="formulario dos" style="align-items:end">
+          <div class="campo">
+            <label for="desde">Desde</label>
+            <input type="date" id="desde" name="desde" value="2026-09-15" min="2026-09-15" max="2026-09-21">
+          </div>
+          <div class="campo">
+            <label for="hasta">Hasta</label>
+            <input type="date" id="hasta" name="hasta" value="2026-09-21" min="2026-09-15" max="2026-09-21">
+          </div>
+          <div class="campo">
+            <label for="agrupacion">Agrupar por</label>
+            <select id="agrupacion">
+              <option value="dia">Día</option>
+              <option value="categoria">Categoría de producto</option>
+            </select>
+          </div>
+          <div class="fila">
+            <button class="boton" type="submit">Generar reporte</button>
+            <button class="boton contorno no-imprimir" type="button" onclick="window.print()">Imprimir</button>
+          </div>
+        </div>
+        <div id="aviso-periodo" hidden style="margin-top:14px"></div>
+      </div>
+    </form>
+
+    <div class="indicadores" id="indicadores"></div>
+
+    <section class="panel">
+      <header><h2 id="titulo-grafico">Ventas por día</h2><span class="pildora info" id="rango-activo"></span></header>
+      <div class="cuerpo">
+        <div class="grafico-barras" id="grafico"></div>
+        <p class="ayuda" style="margin-top:14px">Cada barra se dibuja sobre la misma escala; el valor mostrado a la derecha es el monto bruto documentado.</p>
+      </div>
+    </section>
+
+    <div class="dos-columnas">
+      <section class="panel">
+        <header><h2>Detalle del período</h2></header>
+        <div class="tabla-contenedor">
+          <table class="datos">
+            <caption class="solo-lectores">Ventas diarias del período consultado</caption>
+            <thead>
+              <tr><th>Fecha</th><th class="num">Boletas</th><th class="num">Unidades</th><th class="num">Monto bruto</th><th class="num">Ticket promedio</th></tr>
+            </thead>
+            <tbody id="tabla-detalle"></tbody>
+            <tfoot id="pie-detalle"></tfoot>
+          </table>
+        </div>
+      </section>
+
+      <section class="panel">
+        <header><h2>Productos más vendidos</h2></header>
+        <div class="tabla-contenedor">
+          <table class="datos">
+            <caption class="solo-lectores">Ranking de productos por unidades vendidas en el período</caption>
+            <thead><tr><th class="envolver">Producto</th><th class="num">Unidades</th><th class="num">Monto</th></tr></thead>
+            <tbody id="tabla-ranking"></tbody>
+          </table>
+        </div>
+      </section>
+    </div>
+
+  </div>
+</main>
+
+<div id="pie"></div>
+
+<script src="assets/js/datos.js"></script>
+<script src="assets/js/app.js"></script>
+<script>
+(function () {
+  const formulario = document.querySelector("#formulario-periodo");
+  const elGrafico = document.querySelector("#grafico");
+
+  const ranking = [
+    { producto: "Pollo entero a las brasas", categoria: "Pollos", unidades: 148, monto: 1478520 },
+    { producto: "Combo Brasero", categoria: "Combos", unidades: 96, monto: 1343040 },
+    { producto: "Medio pollo a las brasas", categoria: "Pollos", unidades: 87, monto: 477630 },
+    { producto: "Papas fritas grandes", categoria: "Acompañamientos", unidades: 132, monto: 460680 },
+    { producto: "Combo Familiar", categoria: "Combos", unidades: 18, monto: 404820 },
+    { producto: "Ensalada chilena", categoria: "Acompañamientos", unidades: 74, monto: 169460 },
+    { producto: "Bebida 1,5 L", categoria: "Bebidas", unidades: 91, monto: 199290 },
+    { producto: "Pebre de la casa", categoria: "Salsas", unidades: 110, monto: 108900 }
+  ];
+
+  function datosEnRango() {
+    const desde = document.querySelector("#desde").value;
+    const hasta = document.querySelector("#hasta").value;
+    return BRASERO.ventasDiarias.filter(v => v.fecha >= desde && v.fecha <= hasta);
+  }
+
+  function pintarIndicadores(datos) {
+    const monto = datos.reduce((t, d) => t + d.monto, 0);
+    const documentos = datos.reduce((t, d) => t + d.documentos, 0);
+    const unidades = datos.reduce((t, d) => t + d.unidades, 0);
+    const mejor = datos.reduce((a, b) => (b.monto > a.monto ? b : a), datos[0] || { fecha: "—", monto: 0 });
+
+    document.querySelector("#indicadores").innerHTML = `
+      <div class="indicador"><span class="rotulo">Venta bruta del período</span><div class="valor">${Formato.pesos(monto)}</div><div class="apoyo">${datos.length} día(s) con venta</div></div>
+      <div class="indicador"><span class="rotulo">Boletas emitidas</span><div class="valor">${Formato.numero(documentos)}</div><div class="apoyo">Documentos electrónicos</div></div>
+      <div class="indicador"><span class="rotulo">Ticket promedio</span><div class="valor">${Formato.pesos(documentos ? Math.round(monto / documentos) : 0)}</div><div class="apoyo">${Formato.numero(unidades)} unidades vendidas</div></div>
+      <div class="indicador"><span class="rotulo">Mejor día</span><div class="valor" style="font-size:1.1rem">${mejor.fecha === "—" ? "—" : Formato.fecha(mejor.fecha)}</div><div class="apoyo">${Formato.pesos(mejor.monto)}</div></div>`;
+  }
+
+  function pintarGrafico(datos, agrupacion) {
+    const serie = agrupacion === "dia"
+      ? datos.map(d => ({ etiqueta: Formato.fecha(d.fecha).slice(0, 5), valor: d.monto, titulo: Formato.fechaLarga(d.fecha) }))
+      : [...new Set(ranking.map(r => r.categoria))].map(categoria => ({
+          etiqueta: categoria,
+          valor: ranking.filter(r => r.categoria === categoria).reduce((t, r) => t + r.monto, 0),
+          titulo: categoria
+        })).sort((a, b) => b.valor - a.valor);
+
+    document.querySelector("#titulo-grafico").textContent =
+      agrupacion === "dia" ? "Ventas por día" : "Ventas por categoría de producto";
+
+    if (!serie.length) {
+      elGrafico.innerHTML = `<div class="vacio">El período seleccionado no registra ventas.</div>`;
+      return;
+    }
+
+    const maximo = Math.max(...serie.map(s => s.valor));
+    elGrafico.innerHTML = serie.map(s => `
+      <div class="barra-fila">
+        <span title="${escaparHTML(s.titulo)}">${escaparHTML(s.etiqueta)}</span>
+        <div class="barra-pista">
+          <div class="barra-valor" style="width:${Math.max(2, (s.valor / maximo) * 100)}%"
+               role="img" aria-label="${escaparHTML(s.titulo)}: ${Formato.pesos(s.valor)}"></div>
+        </div>
+        <span class="cifra">${Formato.pesos(s.valor)}</span>
+      </div>`).join("");
+  }
+
+  function pintarDetalle(datos) {
+    document.querySelector("#tabla-detalle").innerHTML = datos.map(d => `
+      <tr>
+        <td>${Formato.fecha(d.fecha)}</td>
+        <td class="num">${d.documentos}</td>
+        <td class="num">${d.unidades}</td>
+        <td class="num">${Formato.pesos(d.monto)}</td>
+        <td class="num">${Formato.pesos(Math.round(d.monto / d.documentos))}</td>
+      </tr>`).join("") || `<tr><td colspan="5"><p class="nota">Sin movimientos en el período.</p></td></tr>`;
+
+    const monto = datos.reduce((t, d) => t + d.monto, 0);
+    const documentos = datos.reduce((t, d) => t + d.documentos, 0);
+    const unidades = datos.reduce((t, d) => t + d.unidades, 0);
+    document.querySelector("#pie-detalle").innerHTML = `
+      <tr>
+        <td>Total</td>
+        <td class="num">${documentos}</td>
+        <td class="num">${unidades}</td>
+        <td class="num">${Formato.pesos(monto)}</td>
+        <td class="num">${Formato.pesos(documentos ? Math.round(monto / documentos) : 0)}</td>
+      </tr>`;
+  }
+
+  function pintarRanking() {
+    document.querySelector("#tabla-ranking").innerHTML = [...ranking]
+      .sort((a, b) => b.unidades - a.unidades)
+      .map(r => `
+        <tr>
+          <td class="envolver">${escaparHTML(r.producto)}<div class="ayuda">${r.categoria}</div></td>
+          <td class="num">${r.unidades}</td>
+          <td class="num">${Formato.pesos(r.monto)}</td>
+        </tr>`).join("");
+  }
+
+  function generar() {
+    const desde = document.querySelector("#desde").value;
+    const hasta = document.querySelector("#hasta").value;
+
+    if (!desde || !hasta) {
+      mostrarAviso("#aviso-periodo", "error", "Debes indicar la fecha de inicio y de término del período.");
+      return;
+    }
+    if (desde > hasta) {
+      mostrarAviso("#aviso-periodo", "error", "La fecha inicial no puede ser posterior a la final.");
+      return;
+    }
+    document.querySelector("#aviso-periodo").hidden = true;
+
+    const datos = datosEnRango();
+    const agrupacion = document.querySelector("#agrupacion").value;
+    document.querySelector("#rango-activo").textContent =
+      `${Formato.fecha(desde)} al ${Formato.fecha(hasta)}`;
+
+    pintarIndicadores(datos);
+    pintarGrafico(datos, agrupacion);
+    pintarDetalle(datos);
+  }
+
+  formulario.addEventListener("submit", e => { e.preventDefault(); generar(); });
+  document.querySelector("#agrupacion").addEventListener("change", generar);
+
+  pintarRanking();
+  generar();
+})();
+</script>
+</body>
+</html>

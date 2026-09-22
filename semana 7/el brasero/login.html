@@ -1,0 +1,161 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Ingreso al sistema — El Brasero</title>
+<meta name="description" content="Autenticación de usuarios y acceso a los módulos según el perfil asignado por el administrador.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Anton&family=Archivo:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;600&display=swap">
+<link rel="stylesheet" href="assets/css/estilos.css">
+</head>
+<body data-pagina="login.html">
+
+<div id="cabecera"></div>
+
+<main class="envoltorio">
+
+  <div class="encabezado-pagina">
+    <span class="rotulo">Caso de uso CU1 · Autenticar usuarios <span class="referencia">RF 12</span></span>
+    <h1>Ingreso al sistema</h1>
+    <p>
+      Un mismo formulario atiende a clientes y funcionarios. El perfil asignado
+      por el administrador determina a qué módulos se puede entrar; la sesión
+      se controla con expiración por inactividad.
+    </p>
+  </div>
+
+  <div class="dos-columnas">
+
+    <form class="panel" id="formulario-ingreso" novalidate>
+      <header><h2>Credenciales</h2><span class="pildora neutro">Sesión cifrada</span></header>
+      <div class="cuerpo pila-lg">
+        <div class="formulario">
+          <div class="campo">
+            <label for="usuario">Usuario o correo <span class="requerido">*</span></label>
+            <input type="text" id="usuario" name="usuario" autocomplete="username" required>
+          </div>
+          <div class="campo">
+            <label for="clave">Contraseña <span class="requerido">*</span></label>
+            <input type="password" id="clave" name="clave" autocomplete="current-password" required>
+            <span class="ayuda">La clave viaja cifrada y se almacena con hash en la base de datos.</span>
+          </div>
+        </div>
+
+        <div id="aviso-ingreso" hidden></div>
+
+        <div class="fila">
+          <button class="boton" type="submit">Ingresar</button>
+          <a class="boton contorno" href="registro.html">Crear cuenta</a>
+        </div>
+        <p class="ayuda">Tras tres intentos fallidos la cuenta se bloquea y debe desbloquearla el administrador.</p>
+      </div>
+    </form>
+
+    <aside class="panel">
+      <header><h2>Acceso de demostración</h2></header>
+      <div class="cuerpo pila">
+        <p class="nota">
+          Elige un perfil para recorrer el prototipo con la vista que le
+          corresponde. En el sistema real las credenciales las valida el Web
+          Service de autenticación.
+        </p>
+        <div class="opciones" id="perfiles-demo"></div>
+      </div>
+    </aside>
+
+  </div>
+
+  <section class="pila" style="margin-top:36px">
+    <span class="rotulo">Matriz de acceso por perfil</span>
+    <div class="panel">
+      <div class="tabla-contenedor">
+        <table class="datos">
+          <caption class="solo-lectores">Pantallas habilitadas para cada perfil de usuario</caption>
+          <thead>
+            <tr><th>Perfil</th><th class="envolver">Responsabilidad en el proceso</th><th class="envolver">Pantallas habilitadas</th></tr>
+          </thead>
+          <tbody id="matriz-perfiles"></tbody>
+        </table>
+      </div>
+    </div>
+  </section>
+
+</main>
+
+<div id="pie"></div>
+
+<script src="assets/js/datos.js"></script>
+<script src="assets/js/app.js"></script>
+<script>
+(function () {
+  const accesos = [
+    { perfil: "Cliente",                usuario: "camila.reyes@correo.cl", nombre: "Camila Andrea Reyes Fuentes", destino: "mi-cuenta.html" },
+    { perfil: "Cajero virtual",         usuario: "pmeneses",               nombre: "Paula Meneses Ríos",          destino: "caja-virtual.html" },
+    { perfil: "Encargado de despacho",  usuario: "rquinteros",             nombre: "Rodrigo Quinteros Alarcón",   destino: "despacho.html" },
+    { perfil: "Administrador",          usuario: "jlagos",                 nombre: "Jorge Lagos Bustos",          destino: "admin-productos.html" },
+    { perfil: "Dueño",                  usuario: "mvaldes",                nombre: "Marcela Valdés Soto",         destino: "reportes.html" }
+  ];
+
+  document.querySelector("#perfiles-demo").innerHTML = accesos.map((a, i) => `
+    <label class="opcion">
+      <input type="radio" name="demo" value="${i}" ${i === 0 ? "checked" : ""}>
+      <span>
+        <span class="titulo">${a.perfil}</span>
+        <span class="detalle"><span class="mono">${a.usuario}</span> · ${a.nombre}</span>
+      </span>
+    </label>`).join("") +
+    `<button class="boton oscuro" type="button" id="entrar-demo">Entrar con el perfil elegido</button>`;
+
+  document.querySelector("#entrar-demo").addEventListener("click", () => {
+    const elegido = accesos[Number(document.querySelector('input[name="demo"]:checked').value)];
+    Sesion.iniciar({ nombre: elegido.nombre, perfil: elegido.perfil, usuario: elegido.usuario });
+    location.href = elegido.destino;
+  });
+
+  document.querySelector("#formulario-ingreso").addEventListener("submit", e => {
+    e.preventDefault();
+    const usuario = e.target.elements.usuario.value.trim();
+    const clave = e.target.elements.clave.value;
+
+    if (!usuario || !clave) {
+      mostrarAviso("#aviso-ingreso", "error", "Ingresa usuario y contraseña.");
+      return;
+    }
+
+    const interno = BRASERO.usuarios.find(u => u.usuario === usuario || u.correo === usuario);
+    const cliente = BRASERO.clientes.find(c => c.correo === usuario);
+
+    if (interno && interno.estado === "Bloqueado") {
+      mostrarAviso("#aviso-ingreso", "alerta", "La cuenta está bloqueada. Solicita al administrador que la habilite.");
+      return;
+    }
+    if (!interno && !cliente) {
+      mostrarAviso("#aviso-ingreso", "error", "Usuario o contraseña incorrectos. Verifica tus datos o <a href=\"registro.html\">crea una cuenta</a>.");
+      return;
+    }
+
+    const datos = interno
+      ? { nombre: interno.nombre, perfil: interno.perfil, usuario: interno.usuario }
+      : { nombre: cliente.nombre, perfil: "Cliente", usuario: cliente.correo };
+    Sesion.iniciar(datos);
+    mostrarAviso("#aviso-ingreso", "ok", `Bienvenido, ${escaparHTML(datos.nombre)}. Redirigiendo a tu módulo…`);
+    setTimeout(() => {
+      location.href = datos.perfil === "Cliente" ? "mi-cuenta.html"
+        : datos.perfil === "Cajero virtual" ? "caja-virtual.html"
+        : datos.perfil === "Encargado de despacho" ? "despacho.html"
+        : datos.perfil === "Dueño" ? "reportes.html" : "admin-productos.html";
+    }, 1200);
+  });
+
+  document.querySelector("#matriz-perfiles").innerHTML = BRASERO.perfiles.map(p => `
+    <tr>
+      <td><strong>${p.nombre}</strong></td>
+      <td class="envolver">${p.descripcion}</td>
+      <td class="envolver">${p.pantallas.map(s => `<span class="pildora neutro">${s}</span>`).join(" ")}</td>
+    </tr>`).join("");
+})();
+</script>
+</body>
+</html>

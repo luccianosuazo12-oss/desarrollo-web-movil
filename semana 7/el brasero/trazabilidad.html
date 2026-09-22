@@ -1,0 +1,137 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Trazabilidad de requerimientos — El Brasero</title>
+<meta name="description" content="Matriz de trazabilidad entre requerimientos funcionales, casos de uso y pantallas construidas en el front end.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Anton&family=Archivo:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;600&display=swap">
+<link rel="stylesheet" href="assets/css/estilos.css">
+</head>
+<body data-pagina="trazabilidad.html">
+
+<div id="cabecera"></div>
+
+<main class="envoltorio">
+
+  <div class="encabezado-pagina">
+    <span class="rotulo">Anexo de la entrega</span>
+    <h1>Trazabilidad de requerimientos</h1>
+    <p>
+      Relación entre cada requerimiento funcional del caso, el caso de uso que lo
+      cubre y la pantalla del front end donde quedó implementado. Sirve como
+      lista de verificación de la entrega.
+    </p>
+  </div>
+
+  <div class="pila-lg">
+
+    <section class="panel">
+      <header><h2>Requerimientos funcionales y pantallas</h2><span class="pildora ok">13 de 13 cubiertos</span></header>
+      <div class="tabla-contenedor">
+        <table class="datos">
+          <caption class="solo-lectores">Requerimientos funcionales con la pantalla que los implementa</caption>
+          <thead>
+            <tr><th>RF</th><th class="envolver">Requerimiento</th><th class="envolver">Pantalla</th><th>Archivo</th></tr>
+          </thead>
+          <tbody id="tabla-rf"></tbody>
+        </table>
+      </div>
+    </section>
+
+    <section class="panel">
+      <header><h2>Casos de uso</h2><span class="pildora ok">9 de 9 con interfaz</span></header>
+      <div class="tabla-contenedor">
+        <table class="datos">
+          <caption class="solo-lectores">Casos de uso del caso con actores y pantalla asociada</caption>
+          <thead>
+            <tr><th>ID</th><th class="envolver">Caso de uso</th><th>RF asociados</th><th class="envolver">Actores</th><th>Pantalla</th></tr>
+          </thead>
+          <tbody id="tabla-cu"></tbody>
+        </table>
+      </div>
+    </section>
+
+    <section class="panel">
+      <header><h2>Requerimientos no funcionales atendidos en el front end</h2></header>
+      <div class="cuerpo">
+        <div class="tabla-contenedor">
+          <table class="datos">
+            <caption class="solo-lectores">Requerimientos no funcionales y cómo se abordan en esta capa</caption>
+            <thead><tr><th class="envolver">Requerimiento no funcional</th><th class="envolver">Cómo se aborda en esta capa</th></tr></thead>
+            <tbody>
+              <tr><td class="envolver">Desarrollo en ambiente web</td><td class="envolver">Sitio HTML5, CSS3 y JavaScript sin dependencias externas de ejecución.</td></tr>
+              <tr><td class="envolver">Arquitectura en capas</td><td class="envolver">Presentación separada en <span class="mono">assets/css</span> y <span class="mono">assets/js</span>; los datos se consumen desde un único módulo que en producción se reemplaza por llamadas a Web Services.</td></tr>
+              <tr><td class="envolver">Diseño responsive</td><td class="envolver">Rejillas fluidas y puntos de quiebre en 860 px, 760 px y 560 px; verificado en escritorio, tablet y teléfono.</td></tr>
+              <tr><td class="envolver">Validación de todas las entradas</td><td class="envolver">RUN por módulo 11, formato y existencia del correo, móvil chileno, mayoría de edad, obligatoriedad y consistencia de contraseñas.</td></tr>
+              <tr><td class="envolver">Mensajes de error orientados al usuario final</td><td class="envolver">Cada campo informa qué corregir y los avisos explican la causa y el paso siguiente, sin códigos técnicos.</td></tr>
+              <tr><td class="envolver">Seguridad: cifrado de clave y control de sesiones</td><td class="envolver">Campos de contraseña enmascarados, bloqueo tras tres intentos, barra de sesión con perfil activo y cierre de sesión visible.</td></tr>
+              <tr><td class="envolver">Interfaz gráfica bien formada</td><td class="envolver">Sistema de componentes reutilizados (paneles, píldoras de estado, tablas de datos), foco visible, etiquetas asociadas y tablas con leyenda para lectores de pantalla.</td></tr>
+              <tr><td class="envolver">Tiempo de aprendizaje menor a 4 horas</td><td class="envolver">Navegación separada entre vista pública y módulos internos, con rótulos que nombran el caso de uso de cada pantalla.</td></tr>
+              <tr><td class="envolver">Integración vía Web Services y API de correo</td><td class="envolver">Las llamadas a la API de mensajería están encapsuladas en <span class="mono">Validar.existenciaCorreo()</span>, único punto a reemplazar por el servicio real.</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+    <section class="panel">
+      <header><h2>Contenido de la entrega</h2></header>
+      <div class="cuerpo">
+        <div class="tabla-contenedor">
+          <table class="datos">
+            <caption class="solo-lectores">Archivos que componen el proyecto</caption>
+            <thead><tr><th>Archivo</th><th class="envolver">Contenido</th></tr></thead>
+            <tbody>
+              <tr><td class="mono">index.html</td><td class="envolver">Portada: propuesta de valor, destacados, proceso de compra y zona de reparto.</td></tr>
+              <tr><td class="mono">menu.html</td><td class="envolver">Carta con filtros, búsqueda, disponibilidad y armado del pedido.</td></tr>
+              <tr><td class="mono">carrito.html</td><td class="envolver">Pedido, datos de despacho, control del radio de 3 km y pago externo.</td></tr>
+              <tr><td class="mono">registro.html</td><td class="envolver">Registro de clientes con validación de RUN y de correo.</td></tr>
+              <tr><td class="mono">login.html</td><td class="envolver">Autenticación y matriz de acceso por perfil.</td></tr>
+              <tr><td class="mono">mi-cuenta.html</td><td class="envolver">Pedidos del cliente, boletas y anulación con motivo.</td></tr>
+              <tr><td class="mono">caja-virtual.html</td><td class="envolver">Registro de ventas y emisión de boleta digital.</td></tr>
+              <tr><td class="mono">despacho.html</td><td class="envolver">Cola de órdenes en orden de llegada y asignación de chofer.</td></tr>
+              <tr><td class="mono">admin-productos.html</td><td class="envolver">Mantenedor del maestro de productos y su disponibilidad.</td></tr>
+              <tr><td class="mono">admin-clientes.html</td><td class="envolver">Mantenedores de clientes y de usuarios internos con perfiles.</td></tr>
+              <tr><td class="mono">reportes.html</td><td class="envolver">Reporte de ventas por período, con gráfico y ranking de productos.</td></tr>
+              <tr><td class="mono">trazabilidad.html</td><td class="envolver">Este anexo de verificación.</td></tr>
+              <tr><td class="mono">assets/css/estilos.css</td><td class="envolver">Sistema de diseño: tokens de color, tipografía y componentes.</td></tr>
+              <tr><td class="mono">assets/js/datos.js</td><td class="envolver">Datos de demostración y catálogo de requerimientos.</td></tr>
+              <tr><td class="mono">assets/js/app.js</td><td class="envolver">Cabecera y pie comunes, sesión, pedido, formatos y validaciones.</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+  </div>
+</main>
+
+<div id="pie"></div>
+
+<script src="assets/js/datos.js"></script>
+<script src="assets/js/app.js"></script>
+<script>
+(function () {
+  document.querySelector("#tabla-rf").innerHTML = BRASERO.requerimientos.map(r => `
+    <tr>
+      <td class="mono">${r.id}</td>
+      <td class="envolver">${escaparHTML(r.texto)}</td>
+      <td class="envolver">${escaparHTML(r.pantalla)}</td>
+      <td><a class="mono" href="${r.archivo}">${r.archivo}</a></td>
+    </tr>`).join("");
+
+  document.querySelector("#tabla-cu").innerHTML = BRASERO.casosUso.map(c => `
+    <tr>
+      <td class="mono">${c.id}</td>
+      <td class="envolver"><strong>${escaparHTML(c.nombre)}</strong></td>
+      <td>${c.rf}</td>
+      <td class="envolver">${escaparHTML(c.actores)}</td>
+      <td><a class="mono" href="${c.archivo}">${c.archivo}</a></td>
+    </tr>`).join("");
+})();
+</script>
+</body>
+</html>

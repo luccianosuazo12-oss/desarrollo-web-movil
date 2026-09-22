@@ -1,0 +1,194 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Órdenes de despacho — El Brasero</title>
+<meta name="description" content="Órdenes de despacho en orden de llegada para cocina, con asignación de chofer y control del radio de reparto.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Anton&family=Archivo:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;600&display=swap">
+<link rel="stylesheet" href="assets/css/estilos.css">
+</head>
+<body data-pagina="despacho.html">
+
+<div id="cabecera"></div>
+
+<main class="envoltorio">
+
+  <div class="encabezado-pagina">
+    <span class="rotulo">Caso de uso CU9 · Obtener orden de despacho <span class="referencia">RF 13</span></span>
+    <h1>Órdenes de despacho</h1>
+    <p>
+      Las órdenes se atienden en el orden en que van llegando. El encargado
+      imprime la orden, la entrega a cocina y, una vez armado el pedido, asigna
+      el chofer que realiza la entrega dentro del radio de 3 km.
+    </p>
+  </div>
+
+  <nav class="rail" aria-label="Módulos internos">
+    <a href="caja-virtual.html">Caja virtual</a>
+    <a href="despacho.html" aria-current="page">Despacho</a>
+    <a href="admin-productos.html">Productos</a>
+    <a href="admin-clientes.html">Clientes y usuarios</a>
+    <a href="reportes.html">Reportes</a>
+  </nav>
+
+  <div class="pila-lg">
+
+    <div class="indicadores" id="indicadores"></div>
+
+    <div id="aviso-despacho" hidden></div>
+
+    <section class="panel">
+      <header>
+        <h2>Cola de preparación y entrega</h2>
+        <div class="fila">
+          <span class="ayuda">Orden de llegada (FIFO)</span>
+          <button class="boton chico contorno no-imprimir" type="button" onclick="window.print()">Imprimir cola</button>
+        </div>
+      </header>
+      <div class="cuerpo pila-lg" id="cola"></div>
+    </section>
+
+    <section class="panel">
+      <header><h2>Choferes en turno</h2><span class="pildora neutro">Vehículo propio</span></header>
+      <div class="tabla-contenedor">
+        <table class="datos">
+          <caption class="solo-lectores">Choferes disponibles y entregas asignadas</caption>
+          <thead><tr><th>Chofer</th><th>Vehículo</th><th class="num">Entregas hoy</th><th>Estado</th></tr></thead>
+          <tbody id="tabla-choferes"></tbody>
+        </table>
+      </div>
+    </section>
+
+  </div>
+</main>
+
+<div id="pie"></div>
+
+<script src="assets/js/datos.js"></script>
+<script src="assets/js/app.js"></script>
+<script>
+(function () {
+  const ordenes = BRASERO.pedidos
+    .filter(p => ["Pagado", "En preparación", "En ruta"].includes(p.estado))
+    .map((p, i) => ({ ...p, lineas: p.lineas.map(l => ({ ...l })), secuencia: i + 1, impresa: p.estado !== "Pagado" }))
+    .sort((a, b) => a.fecha.localeCompare(b.fecha));
+
+  const choferes = [
+    { nombre: "Luis Paredes", vehiculo: "Moto Honda CG 150", entregas: 11, estado: "En ruta" },
+    { nombre: "Ignacio Fuentealba", vehiculo: "Suzuki Alto 2019", entregas: 8, estado: "Disponible" }
+  ];
+
+  const total = p => p.lineas.reduce((t, l) => t + l.precio * l.cantidad, 0);
+
+  function pintarIndicadores() {
+    const enCola = ordenes.filter(o => o.estado !== "En ruta").length;
+    const enRuta = ordenes.filter(o => o.estado === "En ruta").length;
+    const unidades = ordenes.reduce((t, o) => t + o.lineas.reduce((s, l) => s + l.cantidad, 0), 0);
+    document.querySelector("#indicadores").innerHTML = `
+      <div class="indicador"><span class="rotulo">En cocina</span><div class="valor">${enCola}</div><div class="apoyo">Órdenes por armar</div></div>
+      <div class="indicador"><span class="rotulo">En ruta</span><div class="valor">${enRuta}</div><div class="apoyo">Con chofer asignado</div></div>
+      <div class="indicador"><span class="rotulo">Productos a preparar</span><div class="valor">${unidades}</div><div class="apoyo">Unidades en la cola</div></div>
+      <div class="indicador"><span class="rotulo">Radio de reparto</span><div class="valor">${BRASERO.local.radioDespacho} km</div><div class="apoyo">Entrega sin costo</div></div>`;
+  }
+
+  function pintarCola() {
+    const contenedor = document.querySelector("#cola");
+    if (!ordenes.length) {
+      contenedor.innerHTML = `<div class="vacio">No hay órdenes pendientes. Las nuevas aparecen aquí cuando el cajero virtual registra la venta.</div>`;
+      return;
+    }
+    contenedor.innerHTML = ordenes.map(o => `
+      <article class="tarjeta pila" style="border-left:3px solid var(--brasa)">
+        <div class="fila-sep">
+          <div>
+            <span class="rotulo">Orden N° ${String(o.secuencia).padStart(3, "0")} · llegada ${o.fecha.slice(11)}</span>
+            <h3 style="font-size:1.1rem;margin-top:3px">${o.folio} — ${escaparHTML(o.cliente)}</h3>
+          </div>
+          <span class="pildora ${claseEstado(o.estado)}">${o.estado}</span>
+        </div>
+
+        <div class="rejilla c2">
+          <div>
+            <span class="rotulo">Productos</span>
+            <ul class="nota" style="margin:6px 0 0;padding-left:18px;display:grid;gap:3px">
+              ${o.lineas.map(l => `<li><strong>${l.cantidad} ×</strong> ${escaparHTML(l.nombre)} <span class="referencia">${l.codigo}</span></li>`).join("")}
+            </ul>
+          </div>
+          <div>
+            <span class="rotulo">Entrega</span>
+            <p class="nota" style="margin-top:6px">
+              ${escaparHTML(o.direccion)}<br>
+              ${escaparHTML(o.comuna)} · <span class="mono">${o.distancia.toLocaleString("es-CL")} km</span><br>
+              Boleta ${o.boleta || "pendiente de emisión"} · ${Formato.pesos(total(o))}<br>
+              ${o.chofer ? "Chofer: " + escaparHTML(o.chofer) : "Sin chofer asignado"}
+            </p>
+          </div>
+        </div>
+
+        <div class="fila no-imprimir">
+          <button class="boton chico ${o.impresa ? "contorno" : ""}" type="button" data-accion="imprimir" data-folio="${o.folio}">
+            ${o.impresa ? "Reimprimir orden" : "Imprimir para cocina"}
+          </button>
+          ${o.estado === "En preparación"
+            ? `<button class="boton chico oscuro" type="button" data-accion="ruta" data-folio="${o.folio}">Asignar chofer y despachar</button>` : ""}
+          ${o.estado === "En ruta"
+            ? `<button class="boton chico oscuro" type="button" data-accion="entregado" data-folio="${o.folio}">Marcar como entregado</button>` : ""}
+        </div>
+      </article>`).join("");
+  }
+
+  function pintarChoferes() {
+    document.querySelector("#tabla-choferes").innerHTML = choferes.map(c => `
+      <tr>
+        <td>${c.nombre}</td>
+        <td>${c.vehiculo}</td>
+        <td class="num">${c.entregas}</td>
+        <td><span class="pildora ${c.estado === "Disponible" ? "ok" : "alerta"}">${c.estado}</span></td>
+      </tr>`).join("");
+  }
+
+  document.querySelector("#cola").addEventListener("click", e => {
+    const boton = e.target.closest("button[data-accion]");
+    if (!boton) return;
+    const orden = ordenes.find(o => o.folio === boton.dataset.folio);
+
+    if (boton.dataset.accion === "imprimir") {
+      orden.impresa = true;
+      if (orden.estado === "Pagado") orden.estado = "En preparación";
+      mostrarAviso("#aviso-despacho", "ok",
+        `Orden de despacho <strong>${orden.folio}</strong> impresa y entregada a cocina. Se mantiene el orden de llegada.`);
+    }
+
+    if (boton.dataset.accion === "ruta") {
+      const disponible = choferes.find(c => c.estado === "Disponible") || choferes[0];
+      orden.chofer = disponible.nombre;
+      orden.estado = "En ruta";
+      disponible.estado = "En ruta";
+      disponible.entregas++;
+      mostrarAviso("#aviso-despacho", "info",
+        `Pedido <strong>${orden.folio}</strong> despachado con ${escaparHTML(disponible.nombre)} hacia ${escaparHTML(orden.comuna)} (${orden.distancia.toLocaleString("es-CL")} km).`);
+    }
+
+    if (boton.dataset.accion === "entregado") {
+      orden.estado = "Entregado";
+      const indice = ordenes.findIndex(o => o.folio === orden.folio);
+      ordenes.splice(indice, 1);
+      mostrarAviso("#aviso-despacho", "ok",
+        `Pedido <strong>${orden.folio}</strong> entregado. Salió de la cola de despacho.`);
+    }
+
+    pintarCola();
+    pintarChoferes();
+    pintarIndicadores();
+  });
+
+  pintarIndicadores();
+  pintarCola();
+  pintarChoferes();
+})();
+</script>
+</body>
+</html>

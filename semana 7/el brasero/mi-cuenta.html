@@ -1,0 +1,254 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Mi cuenta — El Brasero</title>
+<meta name="description" content="Historial de pedidos del cliente, boletas recibidas y solicitud de anulación de compra con motivo.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Anton&family=Archivo:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;600&display=swap">
+<link rel="stylesheet" href="assets/css/estilos.css">
+</head>
+<body data-pagina="mi-cuenta.html">
+
+<div id="cabecera"></div>
+
+<main class="envoltorio">
+
+  <div class="encabezado-pagina">
+    <span class="rotulo">Caso de uso CU7 · Anular compra <span class="referencia">RF 3</span></span>
+    <h1>Mi cuenta</h1>
+    <p>
+      Desde aquí revisas tus pedidos, descargas las boletas que llegaron a tu
+      correo y solicitas la anulación de una compra indicando el motivo. Los
+      pedidos ya entregados no se pueden anular.
+    </p>
+  </div>
+
+  <nav class="rail" aria-label="Secciones de mi cuenta">
+    <a href="#pedidos" aria-current="page">Mis pedidos</a>
+    <a href="#boletas">Boletas</a>
+    <a href="#datos">Mis datos</a>
+  </nav>
+
+  <div class="pila-lg">
+
+    <div class="indicadores" id="indicadores"></div>
+
+    <section class="panel" id="pedidos">
+      <header>
+        <h2>Historial de pedidos</h2>
+        <span class="pildora neutro" id="cliente-activo"></span>
+      </header>
+      <div class="tabla-contenedor">
+        <table class="datos">
+          <caption class="solo-lectores">Pedidos del cliente con estado y acciones disponibles</caption>
+          <thead>
+            <tr>
+              <th>Folio</th><th>Fecha</th><th class="envolver">Detalle</th>
+              <th class="num">Total</th><th>Estado</th><th>Boleta</th><th>Acción</th>
+            </tr>
+          </thead>
+          <tbody id="tabla-pedidos"></tbody>
+        </table>
+      </div>
+    </section>
+
+    <div id="aviso-anulacion" hidden></div>
+
+    <section class="panel" id="formulario-anulacion" hidden>
+      <header><h2>Solicitud de anulación</h2><span class="pildora alerta">Requiere motivo</span></header>
+      <div class="cuerpo pila">
+        <p class="nota" id="detalle-anulacion"></p>
+        <div class="campo">
+          <label for="motivo">Motivo de la anulación <span class="requerido">*</span></label>
+          <select id="motivo">
+            <option value="">Seleccionar motivo…</option>
+            <option>Me equivoqué en los productos del pedido</option>
+            <option>La dirección de entrega es incorrecta</option>
+            <option>Ya no estaré en el domicilio a la hora de entrega</option>
+            <option>El tiempo de espera es mayor al informado</option>
+            <option>Realicé el pedido dos veces por error</option>
+            <option>Otro motivo</option>
+          </select>
+        </div>
+        <div class="campo">
+          <label for="detalle-motivo">Detalle (opcional)</label>
+          <textarea id="detalle-motivo" placeholder="Cuéntanos brevemente qué ocurrió para poder mejorar el servicio."></textarea>
+        </div>
+        <div class="fila">
+          <button class="boton peligro" type="button" id="confirmar-anulacion">Confirmar anulación</button>
+          <button class="boton contorno" type="button" id="cancelar-anulacion">Volver</button>
+        </div>
+        <p class="ayuda">La devolución del dinero se gestiona con la plataforma de pago y demora entre 3 y 5 días hábiles.</p>
+      </div>
+    </section>
+
+    <section class="panel" id="boletas">
+      <header><h2>Boletas recibidas</h2><span class="pildora info">Enviadas al correo registrado</span></header>
+      <div class="cuerpo">
+        <div class="rejilla c2" id="lista-boletas"></div>
+      </div>
+    </section>
+
+    <section class="panel" id="datos">
+      <header><h2>Mis datos de registro</h2><button class="boton chico contorno" type="button" id="editar-datos">Solicitar cambio</button></header>
+      <div class="cuerpo">
+        <div class="tabla-contenedor">
+          <table class="datos" id="tabla-datos"></table>
+        </div>
+        <p class="ayuda" style="margin-top:12px">
+          El cambio de correo vuelve a pasar por la validación de la API de
+          mensajería antes de quedar grabado.
+        </p>
+      </div>
+    </section>
+
+  </div>
+</main>
+
+<div id="pie"></div>
+
+<script src="assets/js/datos.js"></script>
+<script src="assets/js/app.js"></script>
+<script>
+(function () {
+  const sesion = Sesion.actual();
+  const cliente = BRASERO.clientes.find(c => c.nombre === (sesion && sesion.nombre)) || BRASERO.clientes[0];
+  const pedidos = BRASERO.pedidos
+    .filter(p => p.run === cliente.run)
+    .map(p => ({ ...p, lineas: p.lineas.map(l => ({ ...l })) }));
+
+  let folioEnAnulacion = null;
+
+  const total = p => p.lineas.reduce((t, l) => t + l.precio * l.cantidad, 0);
+
+  document.querySelector("#cliente-activo").textContent = cliente.nombre;
+
+  function pintarIndicadores() {
+    const gastado = pedidos.filter(p => p.estado !== "Anulado").reduce((t, p) => t + total(p), 0);
+    const activos = pedidos.filter(p => ["Pagado", "En preparación", "En ruta"].includes(p.estado)).length;
+    document.querySelector("#indicadores").innerHTML = `
+      <div class="indicador"><span class="rotulo">Pedidos realizados</span><div class="valor">${pedidos.length}</div><div class="apoyo">Desde ${Formato.fecha(cliente.alta)}</div></div>
+      <div class="indicador"><span class="rotulo">En curso</span><div class="valor">${activos}</div><div class="apoyo">Pagados, en preparación o en ruta</div></div>
+      <div class="indicador"><span class="rotulo">Total comprado</span><div class="valor">${Formato.pesos(gastado)}</div><div class="apoyo">No incluye pedidos anulados</div></div>
+      <div class="indicador"><span class="rotulo">Correo validado</span><div class="valor" style="font-size:1.05rem;color:${cliente.correoValidado ? "var(--ok)" : "var(--error)"}">${cliente.correoValidado ? "Sí" : "Pendiente"}</div><div class="apoyo">${cliente.correo}</div></div>`;
+  }
+
+  function pintarPedidos() {
+    document.querySelector("#tabla-pedidos").innerHTML = pedidos.map(p => {
+      const anulable = ["Pagado", "En preparación"].includes(p.estado);
+      return `
+      <tr>
+        <td class="mono">${p.folio}</td>
+        <td>${p.fecha}</td>
+        <td class="envolver">${p.lineas.map(l => `${l.cantidad} × ${escaparHTML(l.nombre)}`).join("<br>")}
+          ${p.motivoAnulacion ? `<div class="ayuda" style="margin-top:6px;color:var(--error)">Motivo: ${escaparHTML(p.motivoAnulacion)}</div>` : ""}
+        </td>
+        <td class="num">${Formato.pesos(total(p))}</td>
+        <td><span class="pildora ${claseEstado(p.estado)}">${p.estado}</span></td>
+        <td class="mono">${p.boleta || "—"}</td>
+        <td>${anulable
+          ? `<button class="boton chico contorno" type="button" data-anular="${p.folio}">Anular</button>`
+          : `<span class="ayuda">No anulable</span>`}</td>
+      </tr>`;
+    }).join("");
+  }
+
+  function pintarBoletas() {
+    const conBoleta = pedidos.filter(p => p.boleta);
+    const contenedor = document.querySelector("#lista-boletas");
+    if (!conBoleta.length) {
+      contenedor.innerHTML = `<p class="nota">Aún no tienes boletas emitidas. Se generan cuando el cajero virtual registra la venta.</p>`;
+      return;
+    }
+    contenedor.innerHTML = conBoleta.map(p => `
+      <div class="boleta">
+        <div class="encabezado">
+          <strong>EL BRASERO</strong><br>
+          ${BRASERO.local.nombre}<br>
+          RUT ${BRASERO.local.rut}<br>
+          BOLETA ELECTRÓNICA N° ${p.boleta}
+        </div>
+        <div class="linea"><span>Pedido</span><span>${p.folio}</span></div>
+        <div class="linea"><span>Fecha</span><span>${p.fecha}</span></div>
+        <div class="separador"></div>
+        ${p.lineas.map(l => `<div class="linea"><span>${l.cantidad} × ${escaparHTML(l.nombre)}</span><span>${Formato.pesos(l.precio * l.cantidad)}</span></div>`).join("")}
+        <div class="separador"></div>
+        <div class="linea"><span>Neto</span><span>${Formato.pesos(Math.round(total(p) / 1.19))}</span></div>
+        <div class="linea"><span>IVA 19%</span><span>${Formato.pesos(total(p) - Math.round(total(p) / 1.19))}</span></div>
+        <div class="linea total"><span>TOTAL</span><span>${Formato.pesos(total(p))}</span></div>
+        <div class="cierre">Enviada a ${cliente.correo}<br>Documento válido como comprobante tributario</div>
+      </div>`).join("");
+  }
+
+  function pintarDatos() {
+    const filas = [
+      ["RUN", cliente.run], ["Nombre completo", cliente.nombre],
+      ["Dirección", cliente.direccion], ["Comuna", cliente.comuna],
+      ["Provincia", cliente.provincia], ["Región", cliente.region],
+      ["Fecha de nacimiento", Formato.fecha(cliente.nacimiento)], ["Sexo", cliente.sexo],
+      ["Correo electrónico", cliente.correo + (cliente.correoValidado ? " (validado)" : " (sin validar)")],
+      ["Teléfono", cliente.telefono]
+    ];
+    document.querySelector("#tabla-datos").innerHTML = `<tbody>${filas.map(([k, v]) =>
+      `<tr><th style="width:220px">${k}</th><td class="envolver">${escaparHTML(v)}</td></tr>`).join("")}</tbody>`;
+  }
+
+  document.querySelector("#tabla-pedidos").addEventListener("click", e => {
+    const boton = e.target.closest("button[data-anular]");
+    if (!boton) return;
+    folioEnAnulacion = boton.dataset.anular;
+    const pedido = pedidos.find(p => p.folio === folioEnAnulacion);
+    const panel = document.querySelector("#formulario-anulacion");
+    panel.hidden = false;
+    document.querySelector("#detalle-anulacion").innerHTML =
+      `Vas a anular el pedido <strong class="mono">${pedido.folio}</strong> del ${pedido.fecha}, por ${Formato.pesos(total(pedido))}. Indica el motivo para dejarlo registrado.`;
+    panel.scrollIntoView({ behavior: "smooth", block: "center" });
+  });
+
+  document.querySelector("#cancelar-anulacion").addEventListener("click", () => {
+    document.querySelector("#formulario-anulacion").hidden = true;
+    folioEnAnulacion = null;
+  });
+
+  document.querySelector("#confirmar-anulacion").addEventListener("click", () => {
+    const motivo = document.querySelector("#motivo");
+    const detalle = document.querySelector("#detalle-motivo").value.trim();
+    const contenedor = motivo.closest(".campo");
+    contenedor.querySelectorAll(".error-campo").forEach(e => e.remove());
+    contenedor.classList.remove("invalido");
+
+    if (!motivo.value) {
+      contenedor.classList.add("invalido");
+      contenedor.insertAdjacentHTML("beforeend", `<span class="error-campo">Debes indicar el motivo de la anulación.</span>`);
+      return;
+    }
+
+    const pedido = pedidos.find(p => p.folio === folioEnAnulacion);
+    pedido.estado = "Anulado";
+    pedido.motivoAnulacion = motivo.value + (detalle ? " — " + detalle : "");
+
+    document.querySelector("#formulario-anulacion").hidden = true;
+    mostrarAviso("#aviso-anulacion", "ok",
+      `Pedido <strong>${pedido.folio}</strong> anulado. Se notificó al administrador y a la plataforma de pago para la devolución del dinero.`);
+    motivo.value = "";
+    document.querySelector("#detalle-motivo").value = "";
+    pintarPedidos();
+    pintarIndicadores();
+  });
+
+  document.querySelector("#editar-datos").addEventListener("click", () => {
+    mostrarAviso("#aviso-anulacion", "info",
+      "Para modificar tus datos el administrador debe confirmar el cambio desde el mantenedor de clientes. Se envió tu solicitud.");
+  });
+
+  pintarIndicadores();
+  pintarPedidos();
+  pintarBoletas();
+  pintarDatos();
+})();
+</script>
+</body>
+</html>

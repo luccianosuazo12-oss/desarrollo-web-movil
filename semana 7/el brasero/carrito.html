@@ -1,0 +1,264 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Mi pedido — El Brasero</title>
+<meta name="description" content="Revisión del pedido, dirección de despacho dentro del radio de 3 km y pago por plataforma externa.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Anton&family=Archivo:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;600&display=swap">
+<link rel="stylesheet" href="assets/css/estilos.css">
+</head>
+<body data-pagina="carrito.html">
+
+<div id="cabecera"></div>
+
+<main class="envoltorio">
+
+  <div class="encabezado-pagina">
+    <span class="rotulo">Caso de uso CU5 · Generar pedido <span class="referencia">RF 1 · RF 2</span></span>
+    <h1>Mi pedido</h1>
+    <p>
+      La orden pasa a cocina únicamente cuando la plataforma de pago confirma la
+      recaudación. Mientras el pago esté pendiente, el pedido queda en estado
+      <em>Por pagar</em> y no se prepara.
+    </p>
+  </div>
+
+  <div class="dos-columnas">
+
+    <div class="pila-lg">
+      <div class="panel">
+        <header>
+          <h2>Productos seleccionados</h2>
+          <button class="enlace-quitar" id="vaciar" type="button">Vaciar pedido</button>
+        </header>
+        <div class="cuerpo" id="lineas"></div>
+      </div>
+
+      <form class="panel" id="formulario-despacho" novalidate>
+        <header><h2>Datos de despacho</h2><span class="pildora neutro">Radio máximo 3 km</span></header>
+        <div class="cuerpo pila">
+          <div class="formulario dos">
+            <div class="campo">
+              <label for="nombre-receptor">Nombre de quien recibe <span class="requerido">*</span></label>
+              <input type="text" id="nombre-receptor" name="nombre" value="Camila Andrea Reyes Fuentes" required>
+            </div>
+            <div class="campo">
+              <label for="telefono-contacto">Teléfono de contacto <span class="requerido">*</span></label>
+              <input type="tel" id="telefono-contacto" name="telefono" value="+56 9 8742 1190" required>
+            </div>
+            <div class="campo">
+              <label for="direccion-despacho">Dirección <span class="requerido">*</span></label>
+              <input type="text" id="direccion-despacho" name="direccion" value="Pasaje El Molino 431" required>
+            </div>
+            <div class="campo">
+              <label for="comuna-despacho">Comuna <span class="requerido">*</span></label>
+              <select id="comuna-despacho" name="comuna" required>
+                <option value="Maipú" data-km="1.4">Maipú</option>
+                <option value="Cerrillos" data-km="2.8">Cerrillos</option>
+                <option value="Estación Central" data-km="2.9">Estación Central</option>
+                <option value="Pudahuel" data-km="3.0">Pudahuel</option>
+                <option value="Padre Hurtado" data-km="5.8">Padre Hurtado</option>
+              </select>
+              <span class="ayuda" id="ayuda-comuna"></span>
+            </div>
+          </div>
+          <div class="campo">
+            <label for="referencia-despacho">Referencias para el chofer</label>
+            <textarea id="referencia-despacho" name="referencia" placeholder="Timbre, portón, indicaciones de acceso…">Casa esquina, portón café. Timbre del lado izquierdo.</textarea>
+          </div>
+        </div>
+      </form>
+
+      <fieldset class="panel" style="border-radius:var(--r-lg)">
+        <div class="cuerpo pila">
+          <legend class="rotulo" style="padding:0">Medio de pago · plataforma externa</legend>
+          <div class="opciones">
+            <label class="opcion">
+              <input type="radio" name="pago" value="Servipag" checked>
+              <span>
+                <span class="titulo">Servipag</span>
+                <span class="detalle">Serás redirigido al portal de Servipag. La recaudación se transfiere a la cuenta del restaurante y el pedido se confirma automáticamente.</span>
+              </span>
+            </label>
+            <label class="opcion">
+              <input type="radio" name="pago" value="Depósito bancario">
+              <span>
+                <span class="titulo">Depósito o transferencia bancaria</span>
+                <span class="detalle">Cuenta corriente Banco de Chile 001-45782-09 a nombre de Pollos El Brasero SpA. El pedido se libera al confirmarse el abono.</span>
+              </span>
+            </label>
+          </div>
+          <p class="ayuda">El sitio no almacena datos de tarjetas: el cobro lo realiza íntegramente la plataforma externa.</p>
+        </div>
+      </fieldset>
+    </div>
+
+    <aside class="pila">
+      <div class="tarjeta pila" id="resumen"></div>
+      <div id="aviso-pago" hidden></div>
+      <div class="tarjeta pila" id="comprobante" hidden></div>
+    </aside>
+
+  </div>
+</main>
+
+<div id="pie"></div>
+
+<script src="assets/js/datos.js"></script>
+<script src="assets/js/app.js"></script>
+<script>
+(function () {
+  const elLineas = document.querySelector("#lineas");
+  const elResumen = document.querySelector("#resumen");
+  const elComuna = document.querySelector("#comuna-despacho");
+  const elAyudaComuna = document.querySelector("#ayuda-comuna");
+
+  function distanciaSeleccionada() {
+    return Number(elComuna.selectedOptions[0].dataset.km);
+  }
+
+  function pintarLineas() {
+    const lineas = Pedido.lineas();
+    if (!lineas.length) {
+      elLineas.innerHTML = `
+        <div class="vacio">
+          <p>Tu pedido está vacío.</p>
+          <p style="margin-top:10px"><a class="boton" href="menu.html">Ver la carta</a></p>
+        </div>`;
+      return;
+    }
+    elLineas.innerHTML = lineas.map(l => `
+      <div class="linea-carrito">
+        <div class="fila" style="flex-wrap:nowrap;gap:12px">
+          ${FOTOS[l.codigo]
+            ? `<img src="${FOTOS[l.codigo]}" alt="" style="width:62px;height:62px;object-fit:cover;border-radius:8px;flex:none">`
+            : ""}
+          <div>
+            <div class="nombre">${escaparHTML(l.nombre)}</div>
+            <div class="ayuda"><span class="referencia">${l.codigo}</span> · ${Formato.pesos(l.precio)} por unidad</div>
+          </div>
+        </div>
+        <div class="contador">
+          <button type="button" data-accion="restar" data-codigo="${l.codigo}" aria-label="Quitar una unidad de ${escaparHTML(l.nombre)}">−</button>
+          <span>${l.cantidad}</span>
+          <button type="button" data-accion="sumar" data-codigo="${l.codigo}" aria-label="Agregar una unidad de ${escaparHTML(l.nombre)}">+</button>
+        </div>
+        <div class="precio">${Formato.pesos(l.precio * l.cantidad)}</div>
+        <button class="enlace-quitar" type="button" data-accion="quitar" data-codigo="${l.codigo}">Quitar</button>
+      </div>`).join("");
+  }
+
+  function pintarResumen() {
+    const total = Pedido.total();
+    const unidades = Pedido.unidades();
+    const km = distanciaSeleccionada();
+    const dentroDelRadio = km <= BRASERO.local.radioDespacho;
+    const neto = Math.round(total / 1.19);
+
+    elResumen.innerHTML = `
+      <span class="rotulo">Resumen</span>
+      <div class="resumen-total"><span>Productos (${unidades})</span><span>${Formato.pesos(total)}</span></div>
+      <div class="resumen-total"><span>Neto</span><span>${Formato.pesos(neto)}</span></div>
+      <div class="resumen-total"><span>IVA 19%</span><span>${Formato.pesos(total - neto)}</span></div>
+      <div class="resumen-total"><span>Despacho (${km.toLocaleString("es-CL")} km)</span><span>${dentroDelRadio ? "Sin costo" : "No disponible"}</span></div>
+      <div class="resumen-total grande"><span>Total a pagar</span><span>${Formato.pesos(total)}</span></div>
+      <button class="boton bloque" id="pagar" type="button" ${(!unidades || !dentroDelRadio) ? "disabled" : ""}>
+        Pagar y confirmar pedido
+      </button>
+      <p class="ayuda">Al confirmar se genera el folio del pedido y se envía a la plataforma de pago. La boleta llega a tu correo una vez registrada la venta.</p>`;
+
+    elAyudaComuna.textContent = dentroDelRadio
+      ? `A ${km.toLocaleString("es-CL")} km del local: dentro del radio de reparto.`
+      : `A ${km.toLocaleString("es-CL")} km: fuera del radio de 3 km, sólo retiro en el local.`;
+    elAyudaComuna.style.color = dentroDelRadio ? "var(--ok)" : "var(--error)";
+
+    document.querySelector("#pagar").addEventListener("click", confirmarPago);
+  }
+
+  function confirmarPago() {
+    const formulario = document.querySelector("#formulario-despacho");
+    const obligatorios = ["nombre", "telefono", "direccion", "comuna"];
+    let valido = true;
+
+    obligatorios.forEach(nombre => {
+      const campo = formulario.elements[nombre];
+      const contenedor = campo.closest(".campo");
+      contenedor.classList.remove("invalido");
+      const anterior = contenedor.querySelector(".error-campo");
+      if (anterior) anterior.remove();
+      if (!campo.value.trim()) {
+        valido = false;
+        contenedor.classList.add("invalido");
+        contenedor.insertAdjacentHTML("beforeend", `<span class="error-campo">Este dato es obligatorio para el despacho.</span>`);
+      }
+    });
+
+    const telefono = formulario.elements.telefono;
+    if (telefono.value.trim() && !Validar.telefono(telefono.value)) {
+      valido = false;
+      const contenedor = telefono.closest(".campo");
+      contenedor.classList.add("invalido");
+      contenedor.insertAdjacentHTML("beforeend", `<span class="error-campo">Formato esperado: +56 9 1234 5678.</span>`);
+    }
+
+    if (!valido) {
+      mostrarAviso("#aviso-pago", "error", "Revisa los datos marcados antes de continuar con el pago.");
+      return;
+    }
+
+    const medio = document.querySelector('input[name="pago"]:checked').value;
+    const folio = "P-" + (2613 + Math.floor(Math.random() * 40));
+    const total = Pedido.total();
+
+    mostrarAviso("#aviso-pago", "info",
+      `Redirigiendo a <strong>${escaparHTML(medio)}</strong> para el pago de ${Formato.pesos(total)}…`);
+
+    setTimeout(() => {
+      mostrarAviso("#aviso-pago", "ok",
+        `Pago confirmado por ${escaparHTML(medio)}. Tu pedido <strong>${folio}</strong> quedó en cola de preparación.`);
+
+      const comprobante = document.querySelector("#comprobante");
+      comprobante.hidden = false;
+      comprobante.innerHTML = `
+        <span class="rotulo">Comprobante de pedido</span>
+        <div class="resumen-total"><span>Folio</span><span>${folio}</span></div>
+        <div class="resumen-total"><span>Medio de pago</span><span>${escaparHTML(medio)}</span></div>
+        <div class="resumen-total"><span>Comuna</span><span>${escaparHTML(document.querySelector("#comuna-despacho").value)}</span></div>
+        <div class="resumen-total"><span>Estado</span><span>Pagado</span></div>
+        <div class="resumen-total grande"><span>Pagado</span><span>${Formato.pesos(total)}</span></div>
+        <p class="ayuda">El cajero virtual registrará la venta y emitirá la boleta digital a tu correo. Puedes seguir el estado en <a href="mi-cuenta.html">Mi cuenta</a>.</p>`;
+
+      Pedido.vaciar();
+      pintarLineas();
+      pintarResumen();
+    }, 1800);
+  }
+
+  elLineas.addEventListener("click", e => {
+    const boton = e.target.closest("button[data-accion]");
+    if (!boton) return;
+    const { accion, codigo } = boton.dataset;
+    if (accion === "sumar") Pedido.cambiarCantidad(codigo, 1);
+    if (accion === "restar") Pedido.cambiarCantidad(codigo, -1);
+    if (accion === "quitar") Pedido.quitar(codigo);
+    pintarLineas();
+    pintarResumen();
+  });
+
+  document.querySelector("#vaciar").addEventListener("click", () => {
+    Pedido.vaciar();
+    pintarLineas();
+    pintarResumen();
+  });
+
+  elComuna.addEventListener("change", pintarResumen);
+
+  pintarLineas();
+  pintarResumen();
+})();
+</script>
+</body>
+</html>
